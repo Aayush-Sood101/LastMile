@@ -1,36 +1,131 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Neighborhood Bulk Order Coordinator - Frontend
+
+This is the frontend application for the Neighborhood Bulk Order Coordinator, which allows neighbors to opt into grouped deliveries to save money and reduce emissions.
+
+## Project Overview
+
+The Neighborhood Bulk Order Coordinator aims to solve the problem of costly and repetitive last-mile deliveries by allowing neighbors to coordinate bulk orders, especially in apartments or hostels.
+
+## Features
+
+- User authentication (login/signup)
+- User dashboard
+- Product browsing and shopping
+- Community management
+- Order placement and tracking
+- Carbon footprint visualization
+- Admin dashboard for Walmart
+- Community admin dashboard
+
+## Tech Stack
+
+- Next.js
+- React
+- Tailwind CSS
+- Axios for API calls
+- Chart.js for data visualization
+
+## Project Structure
+
+```
+frontend/
+├── public/            # Static files
+├── src/
+│   ├── app/           # Next.js app directory
+│   │   ├── login/     # Login page
+│   │   ├── register/  # Registration page
+│   │   ├── dashboard/ # User dashboard
+│   │   ├── admin/     # Walmart admin portal
+│   │   └── ...        # Other pages
+│   ├── components/    # Reusable React components
+│   ├── context/       # React context for state management
+│   ├── hooks/         # Custom React hooks
+│   ├── services/      # API services
+│   └── utils/         # Helper utilities
+```
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js (v16+)
+- npm or yarn
+
+### Installation
+
+1. Clone the repository
+2. Navigate to the frontend directory
+   ```bash
+   cd frontend
+   ```
+3. Install dependencies
+   ```bash
+   npm install
+   # or
+   yarn
+   ```
+
+### Development
+
+Run the development server:
 
 ```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### Building for Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+# or
+yarn build
+```
 
-## Learn More
+### Running in Production
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm start
+# or
+yarn start
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## User Flows
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **User Registration/Login**
+   - Users can register with their information
+   - Users can log in to access their dashboard
 
-## Deploy on Vercel
+2. **Community Management**
+   - Users can create a new community as an admin
+   - Users can apply to join existing communities
+   - Community admins can approve/reject join requests
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. **Shopping Experience**
+   - Browse products with pricing information
+   - View community discounts if part of a community
+   - Add products to cart and checkout
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. **Order Management**
+   - Place individual or community orders
+   - Track order status
+   - View order history
+
+5. **Carbon Footprint Tracking**
+   - View carbon footprint saved through community orders
+   - See community-wide environmental impact
+
+## Walmart Admin Portal
+
+The admin portal allows Walmart administrators to:
+- Approve/reject new community requests
+- View overall carbon footprint savings
+- Monitor community activities
+- Access analytics and reports
+
+## License
+
+This project is licensed under the ISC License.
