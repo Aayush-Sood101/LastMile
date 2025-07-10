@@ -132,7 +132,17 @@ export default function Cart() {
       const token = localStorage.getItem('token');
       const response = await axios.post(
         'http://localhost:5000/api/orders',
-        {}, // No body needed as the backend will use the user's cart
+        {
+          // Pass an empty object or null to use the user's saved address from the backend
+          shippingAddress: {
+            // These can be empty as the backend will use the user's address if not provided
+            street: '',
+            city: '',
+            state: '',
+            zipCode: ''
+          },
+          paymentMethod: 'credit_card' // Default payment method
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -144,10 +154,24 @@ export default function Cart() {
       setCart({ items: [] });
       
       // Redirect to order confirmation
-      router.push(`/orders/${response.data._id}`);
+      const orderId = response.data.order?._id;
+      
+      if (orderId) {
+        router.push(`/orders/${orderId}`);
+      } else {
+        console.error('No order ID in response:', response.data);
+        router.push('/dashboard'); // Fallback to dashboard
+      }
     } catch (error) {
       console.error('Error during checkout:', error);
-      alert('Checkout failed. Please try again.');
+      let errorMessage = 'Checkout failed. Please try again.';
+      
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        errorMessage = error.response.data.message || errorMessage;
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsCheckingOut(false);
     }

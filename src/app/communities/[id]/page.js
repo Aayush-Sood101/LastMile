@@ -3,12 +3,15 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import React from 'react';
 import Navbar from '@/components/Navbar';
 import { FaUsers, FaUserPlus, FaUserMinus, FaCheckCircle, FaTimesCircle, FaLeaf, FaTruck, FaShoppingBag } from 'react-icons/fa';
 
 export default function CommunityDetail({ params }) {
   const router = useRouter();
-  const { id } = params;
+  // Unwrap params using React.use() as recommended by Next.js
+  const unwrappedParams = React.use(params);
+  const { id } = unwrappedParams;
   const [community, setCommunity] = useState(null);
   const [joinRequests, setJoinRequests] = useState([]);
   const [members, setMembers] = useState([]);
@@ -55,25 +58,57 @@ export default function CommunityDetail({ params }) {
       setCommunity(communityResponse.data);
       
       // Check if current user is the admin of this community
-      if (communityResponse.data.createdBy && communityResponse.data.createdBy._id === user._id) {
+      if (communityResponse.data.admin && communityResponse.data.admin._id === user._id) {
         setIsAdmin(true);
         
         // If admin, fetch join requests
-        const requestsResponse = await axios.get(
-          `http://localhost:5000/api/communities/${id}/join-requests`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        
-        setJoinRequests(requestsResponse.data);
+        try {
+          const requestsResponse = await axios.get(
+            `http://localhost:5000/api/communities/${id}/membership-requests`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          
+          console.log('Join requests response:', requestsResponse.data);
+          setJoinRequests(requestsResponse.data);
+        } catch (requestError) {
+          console.error('Error fetching join requests:', requestError);
+          setJoinRequests([]);
+        }
       }
       
-      // Get members
-      const membersResponse = await axios.get(
-        `http://localhost:5000/api/communities/${id}/members`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      setMembers(membersResponse.data);
+      // Get members from the community object instead of a separate endpoint
+      if (communityResponse.data && communityResponse.data.members) {
+        // If the community data already includes populated members
+        if (Array.isArray(communityResponse.data.members) && 
+            communityResponse.data.members.length > 0 && 
+            typeof communityResponse.data.members[0] === 'object') {
+          setMembers(communityResponse.data.members);
+        } else {
+          // If members are just IDs, we need to fetch the member details
+          try {
+            // Fetch only if there are member IDs
+            if (communityResponse.data.members.length > 0) {
+              const membersData = await Promise.all(
+                communityResponse.data.members.map(async (memberId) => {
+                  const userResponse = await axios.get(
+                    `http://localhost:5000/api/users/${memberId}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+                  return userResponse.data;
+                })
+              );
+              setMembers(membersData);
+            } else {
+              setMembers([]);
+            }
+          } catch (memberError) {
+            console.error('Error fetching member details:', memberError);
+            setMembers([]);
+          }
+        }
+      } else {
+        setMembers([]);
+      }
       
       // Get orders for this community
       const ordersResponse = await axios.get(
@@ -102,20 +137,47 @@ export default function CommunityDetail({ params }) {
       
       // Refresh join requests
       const requestsResponse = await axios.get(
-        `http://localhost:5000/api/communities/${id}/join-requests`,
+        `http://localhost:5000/api/communities/${id}/membership-requests`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
       setJoinRequests(requestsResponse.data);
       
-      // If approved, refresh members list
+      // If approved, refresh community data to get updated members list
       if (status === 'approved') {
-        const membersResponse = await axios.get(
-          `http://localhost:5000/api/communities/${id}/members`,
+        // Fetch updated community data to get the current members
+        const communityResponse = await axios.get(
+          `http://localhost:5000/api/communities/${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         
-        setMembers(membersResponse.data);
+        if (communityResponse.data && communityResponse.data.members) {
+          // If the community data already includes populated members
+          if (Array.isArray(communityResponse.data.members) && 
+              communityResponse.data.members.length > 0 && 
+              typeof communityResponse.data.members[0] === 'object') {
+            setMembers(communityResponse.data.members);
+          } else {
+            // If members are just IDs, we need to fetch the member details
+            try {
+              // Fetch only if there are member IDs
+              if (communityResponse.data.members.length > 0) {
+                const membersData = await Promise.all(
+                  communityResponse.data.members.map(async (memberId) => {
+                    const userResponse = await axios.get(
+                      `http://localhost:5000/api/users/${memberId}`,
+                      { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    return userResponse.data;
+                  })
+                );
+                setMembers(membersData);
+              }
+            } catch (memberError) {
+              console.error('Error fetching member details:', memberError);
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('Error handling join request:', error);
