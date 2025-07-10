@@ -456,7 +456,9 @@ export default function AdminDashboard() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-500">
-                                {community.location || 'N/A'}
+                                {typeof community.location === 'object' 
+                                  ? `${community.location.address || ''} ${community.location.city || ''} ${community.location.state || ''} ${community.location.zipCode || ''}`.trim()
+                                  : community.location || 'N/A'}
                               </div>
                             </td>
                           </tr>
@@ -485,7 +487,11 @@ export default function AdminDashboard() {
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
                               <h4 className="text-lg font-semibold">{request.name}</h4>
-                              <p className="text-gray-600 text-sm mb-2">{request.location}</p>
+                              <p className="text-gray-600 text-sm mb-2">
+                                {typeof request.location === 'object' 
+                                  ? `${request.location.address || ''} ${request.location.city || ''} ${request.location.state || ''} ${request.location.zipCode || ''}`.trim()
+                                  : request.location}
+                              </p>
                               <p className="text-gray-700">{request.description}</p>
                               
                               {request.createdBy && (
