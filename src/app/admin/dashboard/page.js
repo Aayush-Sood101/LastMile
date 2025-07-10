@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { motion } from 'framer-motion';
+import { Card, CardHeader, CardBody, Button, Input } from '@/components/Card';
 import { 
   FaUsers, 
   FaUserCheck, 
@@ -13,7 +15,13 @@ import {
   FaSignOutAlt,
   FaCheck,
   FaTimes,
-  FaShoppingCart
+  FaShoppingCart,
+  FaEdit,
+  FaTrash,
+  FaPlus,
+  FaImage,
+  FaDollarSign,
+  FaTag
 } from 'react-icons/fa';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Title } from 'chart.js';
 import { Doughnut, Line } from 'react-chartjs-2';
@@ -27,8 +35,26 @@ export default function AdminDashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [communityRequests, setCommunityRequests] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Product form state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentProduct, setCurrentProduct] = useState(null);
+  const [productForm, setProductForm] = useState({
+    name: '',
+    description: '',
+    price: '',
+    category: '',
+    imageUrl: '',
+    ecoFriendly: false,
+    inventory: ''
+  });
+  const [productFormErrors, setProductFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
 
   useEffect(() => {
     // Check if walmart admin is logged in
@@ -43,6 +69,14 @@ export default function AdminDashboard() {
     // Load initial data based on active tab
     loadTabData(activeTab);
   }, [router]);
+
+  // Show toast message
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: '' });
+    }, 3000);
+  };
 
   const loadTabData = async (tab) => {
     setLoading(true);
@@ -92,6 +126,14 @@ export default function AdminDashboard() {
           );
           setOrders(ordersResponse.data);
           break;
+
+        case 'products':
+          const productsResponse = await axios.get(
+            'http://localhost:5000/api/products',
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          setProducts(productsResponse.data);
+          break;
       }
     } catch (error) {
       console.error('Error loading admin data:', error);
@@ -127,6 +169,155 @@ export default function AdminDashboard() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     router.push('/');
+  };
+
+  // Reset the product form to default values
+  const resetProductForm = () => {
+    setProductForm({
+      name: '',
+      description: '',
+      price: '',
+      category: '',
+      imageUrl: '',
+      ecoFriendly: false,
+      inventory: ''
+    });
+    setIsEditing(false);
+    setCurrentProduct(null);
+  };
+
+  // Handle opening the add product modal
+  const handleAddProduct = () => {
+    resetProductForm();
+    setIsModalOpen(true);
+  };
+
+  // Handle opening the edit product modal
+  const handleEditProduct = (product) => {
+    setCurrentProduct(product);
+    setProductForm({
+      name: product.name,
+      description: product.description || '',
+      price: product.price.toString(),
+      category: product.category || '',
+      imageUrl: product.imageUrl || '',
+      ecoFriendly: product.ecoFriendly || false,
+      inventory: product.inventory ? product.inventory.toString() : '100' // Default to 100 if not provided
+    });
+    setIsEditing(true);
+    setIsModalOpen(true);
+  };
+
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setProductForm(prevForm => ({
+      ...prevForm,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  // Validate product form fields
+  const validateProductForm = () => {
+    const errors = {};
+    
+    if (!productForm.name.trim()) {
+      errors.name = 'Product name is required';
+    }
+    
+    if (!productForm.price.trim() || isNaN(productForm.price)) {
+      errors.price = 'Valid price is required';
+    }
+    
+    if (!productForm.inventory.trim() || isNaN(productForm.inventory)) {
+      errors.inventory = 'Valid inventory amount is required';
+    }
+    
+    if (productForm.description.trim().length < 10) {
+      errors.description = 'Description must be at least 10 characters long';
+    }
+    
+    if (productForm.imageUrl && !/^https?:\/\/.+\.(jpg|jpeg|png|gif)$/.test(productForm.imageUrl)) {
+      errors.imageUrl = 'Image URL must be a valid image link (jpg, jpeg, png, gif)';
+    }
+    
+    setProductFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle form submission (create or update)
+  const handleProductSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateProductForm()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const productData = {
+        ...productForm,
+        price: parseFloat(productForm.price),
+        inventory: parseInt(productForm.inventory)
+      };
+      
+      if (isEditing && currentProduct) {
+        // Update existing product
+        await axios.put(
+          `http://localhost:5000/api/products/${currentProduct._id}`,
+          productData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        showToast('Product updated successfully!');
+      } else {
+        // Create new product
+        await axios.post(
+          'http://localhost:5000/api/products',
+          productData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        showToast('Product created successfully!');
+      }
+      
+      // Close modal and refresh products
+      setIsModalOpen(false);
+      resetProductForm();
+      loadTabData('products');
+    } catch (error) {
+      console.error('Error saving product:', error);
+      showToast(error.response?.data?.message || 'Failed to save product. Please try again.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle product deletion
+  const handleDeleteProduct = async (productId) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) {
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(
+        `http://localhost:5000/api/products/${productId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Refresh products list
+      loadTabData('products');
+      showToast('Product deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      showToast(error.response?.data?.message || 'Failed to delete product. Please try again.', 'error');
+      setLoading(false);
+    }
   };
 
   return (
@@ -235,6 +426,19 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <div className="flex-1 md:ml-64 md:mt-0 mt-16 min-h-screen">
+        {/* Toast Notification */}
+        {toast.show && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`fixed top-4 right-4 z-50 py-3 px-4 rounded-lg shadow-lg ${
+              toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'
+            } text-white`}
+          >
+            {toast.message}
+          </motion.div>
+        )}
+
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
@@ -525,7 +729,7 @@ export default function AdminDashboard() {
                 ) : (
                   <div className="bg-white rounded-xl shadow-sm p-8 text-center">
                     <h3 className="text-xl font-semibold mb-2">No pending community requests</h3>
-                    <p className="text-gray-600">
+                    <p className="text-gray-600 mb-4">
                       All community requests have been processed
                     </p>
                   </div>
@@ -626,17 +830,310 @@ export default function AdminDashboard() {
             {/* Products Tab */}
             {activeTab === 'products' && (
               <div className="p-6">
-                <h1 className="text-3xl font-bold text-gray-800 mb-6">Product Management</h1>
-                
-                <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-                  <h3 className="text-xl font-semibold mb-2">Product Management</h3>
-                  <p className="text-gray-600 mb-4">
-                    This feature is coming soon. You'll be able to add, edit, and delete products.
-                  </p>
-                  <button className="btn-primary" disabled>
+                <div className="flex justify-between items-center mb-6">
+                  <h1 className="text-3xl font-bold text-gray-800">Product Management</h1>
+                  
+                  <Button 
+                    onClick={handleAddProduct} 
+                    icon={<FaPlus />}
+                    size="lg"
+                  >
                     Add New Product
-                  </button>
+                  </Button>
                 </div>
+                
+                <Card>
+                  <CardHeader className="flex justify-between items-center">
+                    <h3 className="text-xl font-semibold">All Products</h3>
+                    <div className="text-gray-600">Total: {products.length} products</div>
+                  </CardHeader>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Image
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Name
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Category
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Price
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Inventory
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Eco-Friendly
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {products.map((product) => (
+                          <tr key={product._id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="h-12 w-12 rounded-lg bg-gray-100 overflow-hidden">
+                                {product.imageUrl ? (
+                                  <img
+                                    src={product.imageUrl}
+                                    alt={product.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="h-full w-full flex items-center justify-center">
+                                    <FaImage className="text-gray-400" />
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">
+                                {product.name}
+                              </div>
+                              <div className="text-xs text-gray-500 truncate max-w-xs">
+                                {product.description}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500">
+                                {product.category || 'Uncategorized'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">
+                                ${product.price.toFixed(2)}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500">
+                                {product.inventory || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500">
+                                {product.ecoFriendly ? (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <FaLeaf className="mr-1" /> Yes
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    No
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex justify-end space-x-2">
+                                <Button 
+                                  onClick={() => handleEditProduct(product)}
+                                  variant="outline"
+                                  size="sm"
+                                  icon={<FaEdit />}
+                                >
+                                  Edit
+                                </Button>
+                                <Button 
+                                  onClick={() => handleDeleteProduct(product._id)}
+                                  variant="danger"
+                                  size="sm"
+                                  icon={<FaTrash />}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {products.length === 0 && (
+                    <div className="p-8 text-center">
+                      <h3 className="text-lg font-semibold mb-2">No products found</h3>
+                      <p className="text-gray-600 mb-4">
+                        Start by adding your first product
+                      </p>
+                      <Button 
+                        onClick={handleAddProduct} 
+                        icon={<FaPlus />}
+                      >
+                        Add New Product
+                      </Button>
+                    </div>
+                  )}
+                </Card>
+                
+                {/* Add/Edit Product Modal */}
+                {isModalOpen && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                    >
+                      <div className="p-6 border-b border-gray-100">
+                        <h3 className="text-xl font-semibold">
+                          {isEditing ? 'Edit Product' : 'Add New Product'}
+                        </h3>
+                      </div>
+                      
+                      <form onSubmit={handleProductSubmit} className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="md:col-span-2">
+                            <Input
+                              label="Product Name"
+                              name="name"
+                              value={productForm.name}
+                              onChange={handleInputChange}
+                              placeholder="Enter product name"
+                              required
+                            />
+                            {productFormErrors.name && (
+                              <p className="mt-2 text-sm text-red-600">
+                                {productFormErrors.name}
+                              </p>
+                            )}
+                          </div>
+                          
+                          <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Description
+                            </label>
+                            <textarea
+                              name="description"
+                              value={productForm.description}
+                              onChange={handleInputChange}
+                              placeholder="Enter product description"
+                              rows={3}
+                              className="block w-full rounded-lg border border-gray-300 focus:ring-emerald-500 focus:border-emerald-500 shadow-sm px-4 py-2.5 transition-colors duration-200"
+                            />
+                            {productFormErrors.description && (
+                              <p className="mt-2 text-sm text-red-600">
+                                {productFormErrors.description}
+                              </p>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <Input
+                              label="Price ($)"
+                              name="price"
+                              type="number"
+                              value={productForm.price}
+                              onChange={handleInputChange}
+                              placeholder="0.00"
+                              required
+                              icon={<FaDollarSign className="text-gray-400" />}
+                            />
+                            {productFormErrors.price && (
+                              <p className="mt-2 text-sm text-red-600">
+                                {productFormErrors.price}
+                              </p>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <Input
+                              label="Category"
+                              name="category"
+                              value={productForm.category}
+                              onChange={handleInputChange}
+                              placeholder="Enter product category"
+                              icon={<FaTag className="text-gray-400" />}
+                            />
+                          </div>
+                          
+                          <div className="md:col-span-2">
+                            <Input
+                              label="Image URL"
+                              name="imageUrl"
+                              value={productForm.imageUrl}
+                              onChange={handleInputChange}
+                              placeholder="Enter image URL"
+                              icon={<FaImage className="text-gray-400" />}
+                            />
+                            {productFormErrors.imageUrl && (
+                              <p className="mt-2 text-sm text-red-600">
+                                {productFormErrors.imageUrl}
+                              </p>
+                            )}
+                            
+                            {productForm.imageUrl && (
+                              <div className="mt-3">
+                                <div className="h-32 w-32 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                                  <img 
+                                    src={productForm.imageUrl} 
+                                    alt="Product preview"
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.src = "https://via.placeholder.com/150?text=Preview";
+                                    }}
+                                    className="h-full w-full object-cover"
+                                  />
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">Image preview</p>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <Input
+                              label="Inventory"
+                              name="inventory"
+                              type="number"
+                              value={productForm.inventory}
+                              onChange={handleInputChange}
+                              placeholder="Enter inventory amount"
+                              required
+                            />
+                            {productFormErrors.inventory && (
+                              <p className="mt-2 text-sm text-red-600">
+                                {productFormErrors.inventory}
+                              </p>
+                            )}
+                          </div>
+                          
+                          <div className="md:col-span-2">
+                            <div className="flex items-center">
+                              <input
+                                id="ecoFriendly"
+                                name="ecoFriendly"
+                                type="checkbox"
+                                checked={productForm.ecoFriendly}
+                                onChange={handleInputChange}
+                                className="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500"
+                              />
+                              <label htmlFor="ecoFriendly" className="ml-2 text-sm text-gray-700">
+                                This product is eco-friendly
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-8 flex justify-end space-x-3">
+                          <Button 
+                            type="button"
+                            onClick={() => setIsModalOpen(false)}
+                            variant="outline"
+                          >
+                            Cancel
+                          </Button>
+                          <Button type="submit" isLoading={isSubmitting}>
+                            {isEditing ? 'Update Product' : 'Create Product'}
+                          </Button>
+                        </div>
+                      </form>
+                    </motion.div>
+                  </div>
+                )}
               </div>
             )}
           </>

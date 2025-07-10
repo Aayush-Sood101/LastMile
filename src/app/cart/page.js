@@ -3,8 +3,20 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
-import { FaTrash, FaLeaf, FaTruck, FaArrowRight } from 'react-icons/fa';
+import { 
+  FaTrash, 
+  FaLeaf, 
+  FaTruck, 
+  FaArrowRight, 
+  FaShoppingCart, 
+  FaAngleRight,
+  FaPlus,
+  FaMinus,
+  FaCreditCard,
+  FaMapMarkerAlt
+} from 'react-icons/fa';
 import { useToast } from '@/components/Toast';
 
 export default function Cart() {

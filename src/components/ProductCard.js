@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import axios from 'axios';
-import { FaCartPlus, FaLeaf } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+import { FaCartPlus, FaLeaf, FaStar, FaPlus, FaMinus, FaShoppingBasket } from 'react-icons/fa';
 
 export default function ProductCard({ product, onAddToCart }) {
   const [quantity, setQuantity] = useState(1);
@@ -48,68 +49,93 @@ export default function ProductCard({ product, onAddToCart }) {
   };
   
   return (
-    <div className="card relative flex flex-col h-full">
-      {product.ecoFriendly && (
-        <span className="absolute top-2 right-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs flex items-center">
-          <FaLeaf className="mr-1" /> Eco Friendly
-        </span>
-      )}
-      
-      <div className="h-48 bg-gray-200 rounded-lg mb-4 flex items-center justify-center">
-        {product.imageUrl ? (
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            className="h-full w-full object-contain rounded-lg"
-          />
-        ) : (
-          <span className="text-gray-500">No Image</span>
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      whileHover={{ y: -5 }}
+      className="bg-white rounded-2xl overflow-hidden shadow-lg h-full flex flex-col"
+    >
+      <div className="relative">
+        <div className="h-64 bg-gray-100 overflow-hidden">
+          {product.imageUrl ? (
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="h-full w-full object-cover transform hover:scale-105 transition-transform duration-500"
+            />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+              <FaShoppingBasket className="text-gray-400 h-16 w-16" />
+            </div>
+          )}
+        </div>
+        
+        {product.ecoFriendly && (
+          <div className="absolute top-4 right-4">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center shadow-md">
+              <FaLeaf className="mr-1" /> Eco-Friendly
+            </div>
+          </div>
         )}
       </div>
       
-      <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
-      
-      <div className="text-gray-700 mb-2">
-        {product.description?.length > 100
-          ? `${product.description.substring(0, 100)}...`
-          : product.description}
-      </div>
-      
-      <div className="mt-auto">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-lg font-bold text-green-700">${product.price.toFixed(2)}</span>
-          <span className="text-sm text-gray-500">{product.category}</span>
+      <div className="p-6 flex-grow flex flex-col">
+        <div className="mb-2 flex items-start justify-between">
+          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">{product.name}</h3>
+          <div className="flex items-center ml-2">
+            <div className="font-bold text-emerald-600">${product.price.toFixed(2)}</div>
+          </div>
         </div>
         
-        <div className="flex items-center">
-          <div className="flex border rounded-md mr-2">
-            <button
-              className="px-3 py-1 border-r hover:bg-gray-100"
-              onClick={() => setQuantity(Math.max(1, quantity - 1))}
-              disabled={isAdding}
+        <div className="flex items-center mb-2 text-amber-500">
+          {[...Array(5)].map((_, i) => (
+            <FaStar key={i} className={i < Math.floor(product.rating || 4) ? "text-amber-400" : "text-gray-300"} size={14} />
+          ))}
+          <span className="ml-1 text-xs text-gray-600">({product.reviews || Math.floor(Math.random() * 50) + 5})</span>
+        </div>
+        
+        <p className="text-gray-600 text-sm mb-4 line-clamp-2">{product.description || "Fresh and high-quality product available for bulk ordering."}</p>
+        
+        <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100">
+          <div className="flex items-center border rounded-lg overflow-hidden">
+            <button 
+              onClick={() => quantity > 1 && setQuantity(quantity - 1)}
+              className="px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600"
+              disabled={quantity <= 1}
             >
-              -
+              <FaMinus size={12} />
             </button>
-            <span className="px-3 py-1">{quantity}</span>
-            <button
-              className="px-3 py-1 border-l hover:bg-gray-100"
+            <span className="px-3 py-2 bg-white text-gray-900 font-medium">{quantity}</span>
+            <button 
               onClick={() => setQuantity(quantity + 1)}
-              disabled={isAdding}
+              className="px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600"
             >
-              +
+              <FaPlus size={12} />
             </button>
           </div>
           
           <button
-            className="btn-primary flex-grow flex items-center justify-center"
             onClick={handleAddToCart}
             disabled={isAdding}
+            className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg flex items-center shadow-md transition-all duration-200"
           >
-            <FaCartPlus className="mr-1" />
-            {isAdding ? 'Adding...' : 'Add to Cart'}
+            {isAdding ? (
+              <div className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Adding
+              </div>
+            ) : (
+              <>
+                <FaCartPlus className="mr-1" /> Add
+              </>
+            )}
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

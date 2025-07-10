@@ -3,9 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import ProductCard from '@/components/ProductCard';
-import { FaSearch, FaFilter, FaTimes } from 'react-icons/fa';
+import PageHeader from '@/components/PageHeader';
+import { Card, CardBody, Button } from '@/components/Card';
+import { FaSearch, FaFilter, FaTimes, FaLeaf, FaShoppingBasket } from 'react-icons/fa';
 
 export default function Dashboard() {
   const router = useRouter();

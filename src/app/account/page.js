@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import OrdersList from '@/components/OrdersList';
 import { useToast } from '@/components/Toast';
-import { FaUserEdit, FaLeaf, FaShoppingBag, FaUsers, FaClipboardList } from 'react-icons/fa';
+import { FaUserEdit, FaLeaf, FaShoppingBag, FaUsers, FaClipboardList, FaEnvelope, FaPhone, FaMapMarkerAlt } from 'react-icons/fa';
 
 export default function Account() {
   const router = useRouter();

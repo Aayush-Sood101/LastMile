@@ -3,9 +3,23 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
+import PageHeader from '@/components/PageHeader';
+import { Card, CardBody, Button } from '@/components/Card';
 import { useToast } from '@/components/Toast';
-import { FaBox, FaTruck, FaCheckCircle, FaTimesCircle, FaAngleRight, FaSearch } from 'react-icons/fa';
+import { 
+  FaBox, 
+  FaTruck, 
+  FaCheckCircle, 
+  FaTimesCircle, 
+  FaAngleRight, 
+  FaSearch,
+  FaFilter,
+  FaSort,
+  FaShoppingBag,
+  FaCalendarAlt
+} from 'react-icons/fa';
 
 export default function Orders() {
   const router = useRouter();
@@ -112,131 +126,210 @@ export default function Orders() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Your Orders</h1>
-        
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
-          </div>
-        ) : error ? (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        ) : orders.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <h3 className="text-xl font-semibold mb-2">No Orders Yet</h3>
-            <p className="text-gray-600 mb-4">
-              You haven't placed any orders yet.
-            </p>
-            <button
-              className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg"
-              onClick={() => router.push('/products')}
-            >
-              Start Shopping
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="mb-6">
-              <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                {/* Search */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search orders..."
-                    className="input-field pl-10 py-2 pr-4 w-full md:w-80"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                  <FaSearch className="absolute left-3 top-3 text-gray-400" />
-                </div>
-                
-                {/* Filter */}
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    className={`px-4 py-2 rounded-full text-sm font-medium ${filter === 'all' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800'}`}
-                    onClick={() => setFilter('all')}
-                  >
-                    All
-                  </button>
-                  <button
-                    className={`px-4 py-2 rounded-full text-sm font-medium ${filter === 'processing' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
-                    onClick={() => setFilter('processing')}
-                  >
-                    Processing
-                  </button>
-                  <button
-                    className={`px-4 py-2 rounded-full text-sm font-medium ${filter === 'shipped' ? 'bg-yellow-600 text-white' : 'bg-gray-200 text-gray-800'}`}
-                    onClick={() => setFilter('shipped')}
-                  >
-                    Shipped
-                  </button>
-                  <button
-                    className={`px-4 py-2 rounded-full text-sm font-medium ${filter === 'delivered' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800'}`}
-                    onClick={() => setFilter('delivered')}
-                  >
-                    Delivered
-                  </button>
-                  <button
-                    className={`px-4 py-2 rounded-full text-sm font-medium ${filter === 'cancelled' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800'}`}
-                    onClick={() => setFilter('cancelled')}
-                  >
-                    Cancelled
-                  </button>
+  // Filter button component for a more consistent UI
+  function FilterButton({ children, active, onClick, color = 'emerald', icon = null }) {
+    const colorClasses = {
+      emerald: active ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+      blue: active ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+      yellow: active ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+      red: active ? 'bg-gradient-to-r from-red-500 to-red-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+    };
+
+    return (
+      <button
+        className={`px-5 py-3 rounded-xl text-sm font-medium transition-all duration-200 shadow-sm flex items-center ${colorClasses[color]}`}
+        onClick={onClick}
+      >
+        {icon}
+        {children}
+      </button>
+    );
+  }
+
+  // Order card component for a cleaner implementation
+  function OrderCard({ order, index, formatDate, getStatusIcon, getStatusClass, onClick }) {
+    return (
+      <Card animate delay={index * 0.05}>
+        <div 
+          className="p-6 cursor-pointer"
+          onClick={onClick}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center">
+              <div className="mr-4 p-3 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 shadow-inner">
+                {getStatusIcon(order.status)}
+              </div>
+              <div>
+                <div className="font-semibold text-lg">Order #{order._id.substring(0, 8)}...</div>
+                <div className="flex items-center text-gray-500 text-sm mt-1">
+                  <FaCalendarAlt className="mr-1.5" size={14} />
+                  {formatDate(order.createdAt)}
                 </div>
               </div>
             </div>
             
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              {filteredOrders.length > 0 ? (
-                <div className="divide-y">
-                  {filteredOrders.map(order => (
-                    <div 
-                      key={order._id} 
-                      className="p-6 hover:bg-gray-50 cursor-pointer"
-                      onClick={() => router.push(`/orders/${order._id}`)}
+            <div className="flex items-center sm:text-right">
+              <div>
+                <div className="font-bold text-xl text-gray-900">${order.totalAmount.toFixed(2)}</div>
+                <div className="mt-1">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusClass(order.status)}`}>
+                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                  </span>
+                </div>
+              </div>
+              <div className="ml-6 p-2 rounded-full bg-emerald-50">
+                <FaAngleRight className="text-emerald-500" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <div>
+                <span className="font-medium">{order.items.length}</span> {order.items.length === 1 ? 'item' : 'items'}
+              </div>
+              {order.isGroupOrder && (
+                <div className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                  Community Order
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+      <Navbar />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <PageHeader 
+          title="Your Orders" 
+          subtitle="Track, manage and review your purchases" 
+        />
+        
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-emerald-500 mb-4"></div>
+            <p className="text-gray-500">Loading your orders...</p>
+          </div>
+        ) : error ? (
+          <Card className="mb-6 border-l-4 border-red-500">
+            <CardBody className="flex">
+              <div className="flex-shrink-0">
+                <FaTimesCircle className="h-5 w-5 text-red-500" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-red-800 font-medium">Something went wrong</h3>
+                <p className="text-red-700 mt-1">{error}</p>
+              </div>
+            </CardBody>
+          </Card>
+        ) : orders.length === 0 ? (
+          <Card className="max-w-2xl mx-auto text-center p-12">
+            <CardBody>
+              <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <FaShoppingBag className="h-10 w-10 text-emerald-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">No Orders Yet</h3>
+              <p className="text-gray-600 mb-8">
+                Start your shopping journey and enjoy community-based bulk discounts!
+              </p>
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={() => router.push('/dashboard')}
+              >
+                Explore Products
+              </Button>
+            </CardBody>
+          </Card>
+        ) : (
+          <>
+            <Card className="mb-8">
+              <CardBody>
+                <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-6">
+                  {/* Search */}
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder="Search by order ID or product name..."
+                      className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200 outline-none"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    <FaSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  </div>
+                  
+                  {/* Filter */}
+                  <div className="flex flex-wrap gap-3">
+                    <FilterButton 
+                      active={filter === 'all'} 
+                      onClick={() => setFilter('all')}
+                      color="emerald"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="mr-4">
-                            {getStatusIcon(order.status)}
-                          </div>
-                          <div>
-                            <div className="font-medium">Order #{order._id.substring(0, 8)}...</div>
-                            <div className="text-sm text-gray-500">{formatDate(order.createdAt)}</div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center">
-                          <div className="mr-4 text-right">
-                            <div className="font-medium">${order.totalAmount.toFixed(2)}</div>
-                            <div className="text-sm">
-                              <span className={`inline-block px-2 py-1 rounded-full text-xs ${getStatusClass(order.status)}`}>
-                                {order.status}
-                              </span>
-                            </div>
-                          </div>
-                          <FaAngleRight className="text-gray-400" />
-                        </div>
-                      </div>
-                      
-                      <div className="mt-2 text-sm text-gray-500">
-                        {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
-                        {order.isGroupOrder && ' • Community Order'}
-                      </div>
-                    </div>
-                  ))}
+                      All
+                    </FilterButton>
+                    <FilterButton 
+                      active={filter === 'processing'} 
+                      onClick={() => setFilter('processing')}
+                      color="blue"
+                      icon={<FaBox className="mr-2" />}
+                    >
+                      Processing
+                    </FilterButton>
+                    <FilterButton 
+                      active={filter === 'shipped'} 
+                      onClick={() => setFilter('shipped')}
+                      color="yellow"
+                      icon={<FaTruck className="mr-2" />}
+                    >
+                      Shipped
+                    </FilterButton>
+                    <FilterButton 
+                      active={filter === 'delivered'} 
+                      onClick={() => setFilter('delivered')}
+                      color="emerald"
+                      icon={<FaCheckCircle className="mr-2" />}
+                    >
+                      Delivered
+                    </FilterButton>
+                    <FilterButton 
+                      active={filter === 'cancelled'} 
+                      onClick={() => setFilter('cancelled')}
+                      color="red"
+                      icon={<FaTimesCircle className="mr-2" />}
+                    >
+                      Cancelled
+                    </FilterButton>
+                  </div>
                 </div>
+              </CardBody>
+            </Card>
+            
+            <div className="space-y-4">
+              {filteredOrders.length > 0 ? (
+                filteredOrders.map((order, index) => (
+                  <OrderCard 
+                    key={order._id} 
+                    order={order}
+                    index={index}
+                    formatDate={formatDate}
+                    getStatusIcon={getStatusIcon}
+                    getStatusClass={getStatusClass}
+                    onClick={() => router.push(`/orders/${order._id}`)}
+                  />
+                ))
               ) : (
-                <div className="p-8 text-center">
-                  <h3 className="text-lg font-semibold mb-2">No Orders Found</h3>
-                  <p className="text-gray-600">Try adjusting your filters or search term.</p>
-                </div>
+                <Card className="text-center p-10">
+                  <CardBody>
+                    <FaFilter className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">No Orders Found</h3>
+                    <p className="text-gray-500">Try adjusting your filters or search term.</p>
+                  </CardBody>
+                </Card>
               )}
             </div>
           </>
