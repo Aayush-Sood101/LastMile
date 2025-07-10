@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import { FaTrash, FaLeaf, FaTruck, FaArrowRight } from 'react-icons/fa';
+import { useToast } from '@/components/Toast';
 
 export default function Cart() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [cart, setCart] = useState({ items: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -93,7 +95,7 @@ export default function Cart() {
       fetchCarbonFootprint();
     } catch (error) {
       console.error('Error updating cart:', error);
-      alert('Failed to update item quantity');
+      showToast('Failed to update item quantity', 'error');
     }
   };
 
@@ -116,13 +118,13 @@ export default function Cart() {
       fetchCarbonFootprint();
     } catch (error) {
       console.error('Error removing item:', error);
-      alert('Failed to remove item from cart');
+      showToast('Failed to remove item from cart', 'error');
     }
   };
 
   const handleCheckout = async () => {
     if (cart.items.length === 0) {
-      alert('Your cart is empty');
+      showToast('Your cart is empty', 'error');
       return;
     }
     
@@ -130,16 +132,25 @@ export default function Cart() {
     
     try {
       const token = localStorage.getItem('token');
+      
+      // Get the user's info to use for shipping address
+      const userResponse = await axios.get(
+        'http://localhost:5000/api/users/me',
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      const userData = userResponse.data;
+      const userAddress = userData.address || {};
+      
+      // Create the order
       const response = await axios.post(
         'http://localhost:5000/api/orders',
         {
-          // Pass an empty object or null to use the user's saved address from the backend
           shippingAddress: {
-            // These can be empty as the backend will use the user's address if not provided
-            street: '',
-            city: '',
-            state: '',
-            zipCode: ''
+            street: userAddress.street || '',
+            city: userAddress.city || '',
+            state: userAddress.state || '',
+            zipCode: userAddress.zipCode || ''
           },
           paymentMethod: 'credit_card' // Default payment method
         },
@@ -153,6 +164,9 @@ export default function Cart() {
       // Clear local cart state
       setCart({ items: [] });
       
+      // Show success message
+      showToast('Order placed successfully!', 'success');
+      
       // Redirect to order confirmation
       const orderId = response.data.order?._id;
       
@@ -160,18 +174,32 @@ export default function Cart() {
         router.push(`/orders/${orderId}`);
       } else {
         console.error('No order ID in response:', response.data);
-        router.push('/dashboard'); // Fallback to dashboard
+        // If we got a successful response but no order ID, check if order is directly in data
+        if (response.data._id) {
+          router.push(`/orders/${response.data._id}`);
+        } else {
+          router.push('/dashboard'); // Fallback to dashboard
+        }
       }
     } catch (error) {
       console.error('Error during checkout:', error);
       let errorMessage = 'Checkout failed. Please try again.';
       
       if (error.response) {
+        console.error('Error response status:', error.response.status);
         console.error('Error response data:', error.response.data);
         errorMessage = error.response.data.message || errorMessage;
+        
+        // More specific error messages based on status code
+        if (error.response.status === 500) {
+          errorMessage = 'Server error. Please contact support if this persists.';
+        } else if (error.response.status === 401) {
+          errorMessage = 'Your session has expired. Please login again.';
+          router.push('/auth/login');
+        }
       }
       
-      alert(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setIsCheckingOut(false);
     }
@@ -314,11 +342,19 @@ export default function Cart() {
                 </div>
                 
                 <button
-                  className="btn-primary w-full mb-4"
+                  className="btn-primary w-full mb-4 flex items-center justify-center"
                   onClick={handleCheckout}
                   disabled={isCheckingOut || cart.items.length === 0}
                 >
-                  {isCheckingOut ? 'Processing...' : 'Checkout'}
+                  {isCheckingOut ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing Order...
+                    </>
+                  ) : 'Proceed to Checkout'}
                 </button>
                 
                 {/* Carbon Footprint Comparison */}

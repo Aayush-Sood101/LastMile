@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaShoppingCart, FaStore, FaUser, FaSignOutAlt, FaUsers } from 'react-icons/fa';
+import { FaShoppingCart, FaStore, FaUser, FaSignOutAlt, FaUsers, FaClipboardList } from 'react-icons/fa';
 
 export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -78,6 +78,9 @@ export default function Navbar() {
                 <Link href="/communities" className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700 ${isActive('/communities')}`}>
                   <FaUsers className="inline mr-1" /> Communities
                 </Link>
+                <Link href="/orders" className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700 ${isActive('/orders')}`}>
+                  <FaClipboardList className="inline mr-1" /> Orders
+                </Link>
                 <Link href="/account" className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700 ${isActive('/account')}`}>
                   <FaUser className="inline mr-1" /> Account
                 </Link>
@@ -120,7 +123,10 @@ export default function Navbar() {
             <Link href="/communities" className={`block px-3 py-2 rounded-md text-base font-medium hover:bg-green-700 ${isActive('/communities')}`}>
               <FaUsers className="inline mr-2" /> Communities
             </Link>
-            <Link href="/account" className={`block px-3 py-2 rounded-md text-base font-medium hover:bg-green-700 ${isActive('/account')}`}>
+            <Link href="/orders" className={`block px-3 py-2 rounded-md textbase font-medium hover:bg-green-700 ${isActive('/orders')}`}>
+              <FaClipboardList className="inline mr-2" /> Orders
+            </Link>
+            <Link href="/account" className={`block px-3 py-2 rounded-md textbase font-medium hover:bg-green-700 ${isActive('/account')}`}>
               <FaUser className="inline mr-2" /> Account
             </Link>
             <Link href="/cart" className={`block px-3 py-2 rounded-md text-base font-medium hover:bg-green-700 ${isActive('/cart')}`}>

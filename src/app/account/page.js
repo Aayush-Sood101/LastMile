@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
-import { FaUserEdit, FaLeaf, FaShoppingBag, FaUsers } from 'react-icons/fa';
+import OrdersList from '@/components/OrdersList';
+import { useToast } from '@/components/Toast';
+import { FaUserEdit, FaLeaf, FaShoppingBag, FaUsers, FaClipboardList } from 'react-icons/fa';
 
 export default function Account() {
   const router = useRouter();
@@ -15,6 +17,7 @@ export default function Account() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('profile');
   const [editMode, setEditMode] = useState(false);
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -108,10 +111,10 @@ export default function Account() {
       }));
       
       setEditMode(false);
-      alert('Profile updated successfully!');
+      showToast('Profile updated successfully!', 'success');
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Failed to update profile. Please try again.');
+      showToast('Failed to update profile. Please try again.', 'error');
     }
   };
 
@@ -141,28 +144,28 @@ export default function Account() {
             {/* Tabs */}
             <div className="flex border-b mb-6">
               <button
-                className={`px-4 py-2 font-medium ${
+                className={`px-4 py-2 font-medium flex items-center ${
                   activeTab === 'profile' ? 'text-green-600 border-b-2 border-green-600' : 'text-gray-600'
                 }`}
                 onClick={() => setActiveTab('profile')}
               >
-                Profile
+                <FaUserEdit className="mr-2" /> Profile
               </button>
               <button
-                className={`px-4 py-2 font-medium ${
+                className={`px-4 py-2 font-medium flex items-center ${
                   activeTab === 'orders' ? 'text-green-600 border-b-2 border-green-600' : 'text-gray-600'
                 }`}
                 onClick={() => setActiveTab('orders')}
               >
-                My Orders
+                <FaClipboardList className="mr-2" /> My Orders
               </button>
               <button
-                className={`px-4 py-2 font-medium ${
+                className={`px-4 py-2 font-medium flex items-center ${
                   activeTab === 'impact' ? 'text-green-600 border-b-2 border-green-600' : 'text-gray-600'
                 }`}
                 onClick={() => setActiveTab('impact')}
               >
-                Environmental Impact
+                <FaLeaf className="mr-2" /> Environmental Impact
               </button>
             </div>
             
@@ -312,92 +315,8 @@ export default function Account() {
             
             {/* Orders Tab */}
             {activeTab === 'orders' && (
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h2 className="text-xl font-semibold mb-6">Order History</h2>
-                
-                {orders.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Order ID
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Date
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Items
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Total
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Status
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Community
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {orders.map(order => (
-                          <tr key={order._id}>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">
-                                {order._id.substring(0, 8)}...
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-500">
-                                {formatDate(order.createdAt)}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-500">
-                                {order.items?.length || 0} items
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium">
-                                ${order.totalAmount?.toFixed(2) || '0.00'}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                ${order.status === 'processing' ? 'bg-yellow-100 text-yellow-800' : 
-                                  order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
-                                  'bg-blue-100 text-blue-800'}`}>
-                                {order.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-500">
-                                {order.community?.name || 'Individual Order'}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <FaShoppingBag className="mx-auto h-12 w-12 text-gray-300" />
-                    <h3 className="mt-2 text-lg font-medium text-gray-900">No orders yet</h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      You haven't placed any orders yet.
-                    </p>
-                    <div className="mt-6">
-                      <button
-                        className="btn-primary"
-                        onClick={() => router.push('/dashboard')}
-                      >
-                        Start Shopping
-                      </button>
-                    </div>
-                  </div>
-                )}
+              <div className="bg-white rounded-xl shadow-sm">
+                <OrdersList />
               </div>
             )}
             
