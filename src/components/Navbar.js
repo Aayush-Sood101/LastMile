@@ -3,314 +3,136 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { useCart } from '@/context/CartContext';
-import { useCommunityCart } from '@/context/CommunityCartContext';
+import { FaShoppingCart, FaStore, FaUser, FaSignOutAlt, FaUsers } from 'react-icons/fa';
 
 export default function Navbar() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
   const pathname = usePathname();
-  const { user, isAuthenticated, logout, isWalmart } = useAuth();
-  const { totalItems } = useCart();
-  const { itemCount: communityItemCount } = useCommunityCart();
+  const [isOpen, setIsOpen] = useState(false);
 
-  // Handle scroll effect for transparent navbar
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
     
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    if (token && userStr) {
+      setIsLoggedIn(true);
+      setUser(JSON.parse(userStr));
+      
+      // Get cart count
+      fetchCartCount(token);
+    }
   }, []);
 
-  // Check if current path is the homepage
-  const isHomePage = pathname === '/';
-  
-  // Determine navbar styles based on scroll position and current page
-  const navbarClasses = `
-    fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 
-    ${isHomePage && !isScrolled 
-      ? 'bg-transparent text-white' 
-      : 'bg-white text-gray-800 shadow-md'}
-  `;
+  const fetchCartCount = async (token) => {
+    try {
+      const response = await fetch('http://localhost:5000/api/cart', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.items) {
+          setCartCount(data.items.length);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+    }
+  };
 
-  // Link styles for homepage vs other pages
-  const linkClasses = `
-    hover:text-blue-500 transition-colors duration-200
-    ${isHomePage && !isScrolled ? 'text-white hover:text-blue-300' : 'text-gray-800'}
-  `;
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/';
+  };
+
+  const toggleMenu = () => {
+    setIsOpen(!isOpen);
+  };
+
+  const isActive = (path) => {
+    return pathname === path ? 'bg-green-700' : '';
+  };
 
   return (
-    <nav className={navbarClasses}>
-      <div className="container mx-auto max-w-7xl">
-        <div className="flex justify-between items-center py-4">
-          {/* Logo */}
-          <Link href="/">
-            <div className="flex items-center space-x-2 font-bold text-xl">
-              <span>NeighborBulk</span>
-            </div>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link href="/products" className={linkClasses}>
-              Products
+    <nav className="bg-green-600 text-white shadow-md">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex justify-between h-16">
+          <div className="flex items-center">
+            <Link href={isLoggedIn ? '/dashboard' : '/'} className="font-bold text-xl">
+              BulkBuddy
             </Link>
-            <Link href="/communities" className={linkClasses}>
-              Communities
-            </Link>
-            <Link href="/how-it-works" className={linkClasses}>
-              How It Works
-            </Link>
-
-            {/* Auth Links */}
-            {isAuthenticated ? (
-              <div className="flex items-center space-x-6">
-                {/* Cart Icon with counter */}
-                <Link href="/cart" className="relative">
-                  <span className={linkClasses}>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-6 w-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
-                    </svg>
-                  </span>
-                  {totalItems > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                      {totalItems}
-                    </span>
-                  )}
-                </Link>
-
-                {/* Community Cart Icon with counter (only show for users in a community) */}
-                {user?.community && (
-                  <Link href="/communities/cart" className="relative">
-                    <span className={linkClasses}>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                        />
-                      </svg>
-                    </span>
-                    {communityItemCount > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                        {communityItemCount}
-                      </span>
-                    )}
-                  </Link>
-                )}
-
-                {/* Dashboard Link */}
-                <Link 
-                  href={isWalmart ? "/dashboard/admin" : "/dashboard"}
-                  className={`${linkClasses} font-semibold`}
-                >
-                  Dashboard
-                </Link>
-
-                {/* User Menu Dropdown */}
-                <div className="relative group">
-                  <button className={`${linkClasses} flex items-center space-x-1`}>
-                    <span>{user?.name?.split(' ')[0] || 'Account'}</span>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 hidden group-hover:block">
-                    <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                      Profile
-                    </Link>
-                    <Link href="/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                      My Orders
-                    </Link>
-                    <button
-                      onClick={logout}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Logout
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-4">
-                <Link
-                  href="/login"
-                  className={`${linkClasses} font-semibold`}
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/register"
-                  className={`
-                    ${isHomePage && !isScrolled 
-                      ? 'bg-white text-blue-700 hover:bg-gray-100' 
-                      : 'bg-blue-600 text-white hover:bg-blue-700'} 
-                    px-4 py-2 rounded-md font-semibold transition-colors
-                  `}
-                >
-                  Sign Up
-                </Link>
-              </div>
-            )}
           </div>
-
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden focus:outline-none"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              {isMenuOpen ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              )}
-            </svg>
-          </button>
+          
+          {isLoggedIn && (
+            <>
+              <div className="hidden md:flex items-center space-x-4">
+                <Link href="/dashboard" className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700 ${isActive('/dashboard')}`}>
+                  <FaStore className="inline mr-1" /> Products
+                </Link>
+                <Link href="/communities" className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700 ${isActive('/communities')}`}>
+                  <FaUsers className="inline mr-1" /> Communities
+                </Link>
+                <Link href="/account" className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700 ${isActive('/account')}`}>
+                  <FaUser className="inline mr-1" /> Account
+                </Link>
+                <Link href="/cart" className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700 ${isActive('/cart')}`}>
+                  <FaShoppingCart className="inline mr-1" /> 
+                  Cart {cartCount > 0 && <span className="bg-white text-green-600 rounded-full px-2 py-0.5 text-xs ml-1">{cartCount}</span>}
+                </Link>
+                <button onClick={handleLogout} className="px-3 py-2 rounded-md text-sm font-medium hover:bg-green-700">
+                  <FaSignOutAlt className="inline mr-1" /> Logout
+                </button>
+              </div>
+              
+              {/* Mobile menu button */}
+              <div className="md:hidden flex items-center">
+                <button
+                  onClick={toggleMenu}
+                  className="inline-flex items-center justify-center p-2 rounded-md hover:bg-green-700 focus:outline-none"
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    {isOpen ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    )}
+                  </svg>
+                </button>
+              </div>
+            </>
+          )}
         </div>
-
-        {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <div className="md:hidden py-4 bg-white text-gray-800">
-            <div className="flex flex-col space-y-3">
-              <Link
-                href="/products"
-                className="py-2 px-4 hover:bg-gray-100 rounded-md"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Products
-              </Link>
-              <Link
-                href="/communities"
-                className="py-2 px-4 hover:bg-gray-100 rounded-md"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Communities
-              </Link>
-              <Link
-                href="/how-it-works"
-                className="py-2 px-4 hover:bg-gray-100 rounded-md"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                How It Works
-              </Link>
-
-              {/* Auth Links for Mobile */}
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    href="/cart"
-                    className="py-2 px-4 hover:bg-gray-100 rounded-md flex items-center justify-between"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <span>Cart</span>
-                    {totalItems > 0 && (
-                      <span className="bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                        {totalItems}
-                      </span>
-                    )}
-                  </Link>
-                  <Link
-                    href={isWalmart ? "/dashboard/admin" : "/dashboard"}
-                    className="py-2 px-4 hover:bg-gray-100 rounded-md"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
-                  <Link
-                    href="/profile"
-                    className="py-2 px-4 hover:bg-gray-100 rounded-md"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Profile
-                  </Link>
-                  <Link
-                    href="/orders"
-                    className="py-2 px-4 hover:bg-gray-100 rounded-md"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    My Orders
-                  </Link>
-                  <button
-                    onClick={() => {
-                      logout();
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full text-left py-2 px-4 hover:bg-gray-100 rounded-md"
-                  >
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    className="py-2 px-4 hover:bg-gray-100 rounded-md"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="py-2 px-4 bg-blue-600 text-white rounded-md"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Sign Up
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Mobile menu */}
+      {isLoggedIn && isOpen && (
+        <div className="md:hidden">
+          <div className="px-2 pt-2 pb-3 space-y-1">
+            <Link href="/dashboard" className={`block px-3 py-2 rounded-md text-base font-medium hover:bg-green-700 ${isActive('/dashboard')}`}>
+              <FaStore className="inline mr-2" /> Products
+            </Link>
+            <Link href="/communities" className={`block px-3 py-2 rounded-md text-base font-medium hover:bg-green-700 ${isActive('/communities')}`}>
+              <FaUsers className="inline mr-2" /> Communities
+            </Link>
+            <Link href="/account" className={`block px-3 py-2 rounded-md text-base font-medium hover:bg-green-700 ${isActive('/account')}`}>
+              <FaUser className="inline mr-2" /> Account
+            </Link>
+            <Link href="/cart" className={`block px-3 py-2 rounded-md text-base font-medium hover:bg-green-700 ${isActive('/cart')}`}>
+              <FaShoppingCart className="inline mr-2" /> 
+              Cart {cartCount > 0 && <span className="bg-white text-green-600 rounded-full px-2 py-0.5 text-xs ml-1">{cartCount}</span>}
+            </Link>
+            <button onClick={handleLogout} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-green-700">
+              <FaSignOutAlt className="inline mr-2" /> Logout
+            </button>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

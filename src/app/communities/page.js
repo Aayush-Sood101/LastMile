@@ -2,248 +2,390 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
-import { communityService } from '@/services/api';
+import axios from 'axios';
+import Navbar from '@/components/Navbar';
+import { FaUsers, FaUserPlus, FaCrown, FaCheckCircle, FaTimesCircle, FaMapMarkerAlt } from 'react-icons/fa';
 
-export default function CommunitiesPage() {
-  const { isAuthenticated, user } = useAuth();
+export default function Communities() {
   const router = useRouter();
-  
   const [communities, setCommunities] = useState([]);
-  const [userCommunity, setUserCommunity] = useState(null);
+  const [userCommunities, setUserCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredCommunities, setFilteredCommunities] = useState([]);
-  
-  // Fetch communities
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [selectedCommunity, setSelectedCommunity] = useState(null);
+  const [createFormData, setCreateFormData] = useState({
+    name: '',
+    description: '',
+    location: '',
+    rules: '',
+  });
+  const [joinReason, setJoinReason] = useState('');
+
   useEffect(() => {
-    const fetchCommunities = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch all approved communities
-        const data = await communityService.getAllCommunities();
-        setCommunities(data);
-        setFilteredCommunities(data);
-        
-        // Check if user is in a community
-        if (isAuthenticated && user?.communityId) {
-          try {
-            const userCommunityData = await communityService.getCommunityById(user.communityId);
-            setUserCommunity(userCommunityData);
-          } catch (err) {
-            console.error('Error fetching user community:', err);
-          }
-        }
-      } catch (err) {
-        setError('Failed to load communities');
-        console.error('Communities fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/auth/login');
+      return;
+    }
+
+    // Fetch communities data
     fetchCommunities();
-  }, [isAuthenticated, user]);
-  
-  // Filter communities when search term changes
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredCommunities(communities);
-      return;
-    }
-    
-    const term = searchTerm.toLowerCase();
-    const filtered = communities.filter(
-      community => 
-        community.name.toLowerCase().includes(term) || 
-        community.description.toLowerCase().includes(term) ||
-        community.location.city.toLowerCase().includes(term) ||
-        community.location.state.toLowerCase().includes(term) ||
-        community.location.zipCode.includes(term)
-    );
-    
-    setFilteredCommunities(filtered);
-  }, [searchTerm, communities]);
-  
-  // Handle join community request
-  const handleJoinCommunity = async (communityId) => {
-    if (!isAuthenticated) {
-      router.push(`/login?redirect=/communities`);
-      return;
-    }
-    
+  }, [router]);
+
+  const fetchCommunities = async () => {
+    setLoading(true);
     try {
-      await communityService.joinCommunity(communityId);
-      alert('Join request sent successfully! The community admin will review your request.');
-    } catch (err) {
-      setError('Failed to send join request');
-      console.error('Join community error:', err);
+      const token = localStorage.getItem('token');
+      const [communitiesResponse, userResponse] = await Promise.all([
+        axios.get('http://localhost:5000/api/communities', {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get('http://localhost:5000/api/users/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+
+      setCommunities(communitiesResponse.data);
+      
+      // Extract user's communities
+      if (userResponse.data.communities) {
+        setUserCommunities(userResponse.data.communities);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching communities:', error);
+      setError('Failed to load communities. Please try again later.');
+    } finally {
+      setLoading(false);
     }
   };
-  
+
+  const handleCreateInputChange = (e) => {
+    const { name, value } = e.target;
+    setCreateFormData({
+      ...createFormData,
+      [name]: value,
+    });
+  };
+
+  const handleCreateCommunity = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        'http://localhost:5000/api/communities', 
+        createFormData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Reset form and close modal
+      setCreateFormData({
+        name: '',
+        description: '',
+        location: '',
+        rules: '',
+      });
+      setShowCreateModal(false);
+      
+      // Refresh communities list
+      fetchCommunities();
+      
+    } catch (error) {
+      console.error('Error creating community:', error);
+      alert('Failed to create community. Please try again.');
+    }
+  };
+
+  const handleJoinRequest = async (e) => {
+    e.preventDefault();
+    
+    if (!selectedCommunity) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `http://localhost:5000/api/communities/${selectedCommunity._id}/join`,
+        { reason: joinReason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Reset and close modal
+      setJoinReason('');
+      setSelectedCommunity(null);
+      setShowJoinModal(false);
+      
+      alert('Join request submitted successfully!');
+      
+    } catch (error) {
+      console.error('Error submitting join request:', error);
+      alert('Failed to submit join request. Please try again.');
+    }
+  };
+
+  const openJoinModal = (community) => {
+    setSelectedCommunity(community);
+    setShowJoinModal(true);
+  };
+
+  const isMemberOf = (communityId) => {
+    return userCommunities.some(c => c === communityId);
+  };
+
   return (
-    <main className="py-12">
-      <div className="container mx-auto px-4 max-w-6xl">
-        <h1 className="text-3xl font-bold mb-2">Communities</h1>
-        <p className="text-gray-600 mb-8">
-          Join a community to save money on deliveries and reduce carbon emissions.
-        </p>
-        
-        {/* Error message */}
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">Communities</h1>
+            <p className="text-gray-600">Join or create a community to coordinate bulk orders</p>
+          </div>
+          
+          <button
+            className="btn-primary mt-4 md:mt-0 flex items-center"
+            onClick={() => setShowCreateModal(true)}
+          >
+            <FaUsers className="mr-2" /> Create Community
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             {error}
           </div>
-        )}
-        
-        {/* User's Community */}
-        {userCommunity && (
-          <div className="bg-blue-50 rounded-lg p-6 mb-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-              <div>
-                <h2 className="text-lg font-semibold text-blue-800">Your Community</h2>
-                <p className="text-blue-600">You're a member of {userCommunity.name}</p>
-              </div>
-              <Link 
-                href={`/communities/${userCommunity._id}`}
-                className="mt-4 md:mt-0 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md text-sm font-medium"
-              >
-                View Community
-              </Link>
-            </div>
-          </div>
-        )}
-        
-        {/* Search and Create */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-          <div className="w-full md:w-1/2 mb-4 md:mb-0">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search communities by name, location..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          {!userCommunity && (
-            <Link 
-              href="/communities/create"
-              className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-md font-medium"
-            >
-              Create Community
-            </Link>
-          )}
-        </div>
-        
-        {/* Communities List */}
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        ) : filteredCommunities.length > 0 ? (
+        ) : communities.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCommunities.map(community => (
-              <div 
-                key={community._id} 
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-              >
+            {communities.map(community => (
+              <div key={community._id} className="bg-white rounded-xl shadow-sm overflow-hidden">
                 <div className="p-6">
-                  <h3 className="text-xl font-semibold mb-2">{community.name}</h3>
-                  <div className="flex items-center text-gray-600 text-sm mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    {community.location.city}, {community.location.state}
+                  <div className="flex items-start justify-between mb-4">
+                    <h3 className="text-xl font-semibold">{community.name}</h3>
+                    {community.approved ? (
+                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Active</span>
+                    ) : (
+                      <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Pending Approval</span>
+                    )}
                   </div>
-                  <p className="text-gray-600 mb-4 line-clamp-3">
-                    {community.description}
+                  
+                  <div className="flex items-start mb-4">
+                    <FaMapMarkerAlt className="text-gray-400 mt-1 mr-2" />
+                    <p className="text-gray-600">
+                      {typeof community.location === 'object' 
+                        ? `${community.location.address || ''} ${community.location.city || ''} ${community.location.state || ''} ${community.location.zipCode || ''}`.trim()
+                        : community.location}
+                    </p>
+                  </div>
+                  
+                  <p className="text-gray-700 mb-6">
+                    {community.description.length > 150 
+                      ? `${community.description.substring(0, 150)}...` 
+                      : community.description}
                   </p>
                   
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 text-sm">{community.members || 0} members</span>
-                    {userCommunity ? (
-                      userCommunity._id === community._id ? (
-                        <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                          Member
-                        </span>
-                      ) : (
-                        <Link 
-                          href={`/communities/${community._id}`}
-                          className="text-blue-600 hover:text-blue-800 font-medium text-sm"
-                        >
-                          View Details
-                        </Link>
-                      )
-                    ) : (
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleJoinCommunity(community._id)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded-md text-sm"
-                        >
-                          Join
-                        </button>
-                        <Link 
-                          href={`/communities/${community._id}`}
-                          className="text-blue-600 hover:text-blue-800 font-medium text-sm py-1"
-                        >
-                          Details
-                        </Link>
+                  <div className="flex items-center text-gray-500 text-sm mb-6">
+                    <div className="flex items-center">
+                      <FaUsers className="mr-1" />
+                      <span>{community.memberCount || 1} members</span>
+                    </div>
+                    {community.createdBy && (
+                      <div className="flex items-center ml-4">
+                        <FaCrown className="mr-1 text-yellow-500" />
+                        <span>Admin: {community.createdBy.name}</span>
                       </div>
                     )}
                   </div>
+                  
+                  {isMemberOf(community._id) ? (
+                    <button
+                      className="w-full btn-secondary flex justify-center items-center"
+                      onClick={() => router.push(`/communities/${community._id}`)}
+                    >
+                      <FaCheckCircle className="mr-2" /> Member - View Details
+                    </button>
+                  ) : (
+                    <button
+                      className="w-full btn-primary flex justify-center items-center"
+                      onClick={() => openJoinModal(community)}
+                      disabled={!community.approved}
+                    >
+                      <FaUserPlus className="mr-2" /> 
+                      {community.approved ? 'Request to Join' : 'Pending Approval'}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="bg-gray-50 rounded-lg p-8 text-center">
-            <p className="text-gray-600 text-lg mb-4">
-              {searchTerm 
-                ? 'No communities match your search criteria.' 
-                : 'No communities available in your area yet.'}
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+            <h3 className="text-xl font-semibold mb-2">No communities found</h3>
+            <p className="text-gray-600 mb-6">
+              Be the first to create a community in your neighborhood!
             </p>
-            {!userCommunity && (
-              <Link 
-                href="/communities/create"
-                className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-md font-medium"
-              >
-                Create Community
-              </Link>
-            )}
-          </div>
-        )}
-        
-        {/* Create Community Promotion */}
-        {!userCommunity && !loading && (
-          <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg p-8 mt-12">
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <div className="md:w-2/3 mb-6 md:mb-0">
-                <h2 className="text-2xl font-bold mb-4">Start Your Own Community</h2>
-                <p className="mb-2">
-                  Create a community for your apartment complex, neighborhood, or dormitory.
-                  Get discounts on deliveries and reduce your carbon footprint.
-                </p>
-                <ul className="list-disc pl-5 mb-4">
-                  <li>Save up to 5% on every order</li>
-                  <li>Reduce carbon emissions with fewer deliveries</li>
-                  <li>Build connections with neighbors</li>
-                  <li>Track your environmental impact</li>
-                </ul>
-              </div>
-              <Link 
-                href="/communities/create"
-                className="bg-white text-blue-600 hover:bg-gray-100 py-3 px-6 rounded-md font-semibold"
-              >
-                Create Community
-              </Link>
-            </div>
+            <button
+              className="btn-primary inline-flex items-center"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <FaUsers className="mr-2" /> Create Community
+            </button>
           </div>
         )}
       </div>
-    </main>
+
+      {/* Create Community Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Create New Community</h2>
+            
+            <form onSubmit={handleCreateCommunity}>
+              <div className="mb-4">
+                <label htmlFor="name" className="block text-gray-700 font-medium mb-2">
+                  Community Name
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={createFormData.name}
+                  onChange={handleCreateInputChange}
+                  required
+                  className="input-field"
+                  placeholder="e.g. Green Acres Apartments"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label htmlFor="location" className="block text-gray-700 font-medium mb-2">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  id="location"
+                  name="location"
+                  value={createFormData.location}
+                  onChange={handleCreateInputChange}
+                  required
+                  className="input-field"
+                  placeholder="e.g. 123 Main Street, City, State"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label htmlFor="description" className="block text-gray-700 font-medium mb-2">
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  name="description"
+                  value={createFormData.description}
+                  onChange={handleCreateInputChange}
+                  required
+                  rows={3}
+                  className="input-field"
+                  placeholder="Tell us about your community..."
+                />
+              </div>
+              
+              <div className="mb-6">
+                <label htmlFor="rules" className="block text-gray-700 font-medium mb-2">
+                  Community Rules (Optional)
+                </label>
+                <textarea
+                  id="rules"
+                  name="rules"
+                  value={createFormData.rules}
+                  onChange={handleCreateInputChange}
+                  rows={3}
+                  className="input-field"
+                  placeholder="Any specific rules or guidelines for your community..."
+                />
+              </div>
+              
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+                <div className="flex">
+                  <div className="ml-3">
+                    <p className="text-sm text-yellow-700">
+                      Community creation requests need approval from Walmart before becoming active. This typically takes 1-2 business days.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-4">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                >
+                  Create Community
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Join Community Modal */}
+      {showJoinModal && selectedCommunity && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h2 className="text-2xl font-bold mb-2">Join {selectedCommunity.name}</h2>
+            <p className="text-gray-600 mb-4">Your request will be reviewed by the community admin.</p>
+            
+            <form onSubmit={handleJoinRequest}>
+              <div className="mb-6">
+                <label htmlFor="reason" className="block text-gray-700 font-medium mb-2">
+                  Why do you want to join this community?
+                </label>
+                <textarea
+                  id="reason"
+                  value={joinReason}
+                  onChange={(e) => setJoinReason(e.target.value)}
+                  required
+                  rows={4}
+                  className="input-field"
+                  placeholder="Briefly tell the community admin why you'd like to join..."
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-4">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setSelectedCommunity(null);
+                    setShowJoinModal(false);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                >
+                  Submit Request
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
