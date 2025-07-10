@@ -30,6 +30,14 @@ export default function CommunityDetail({ params }) {
 
     // Fetch community data
     fetchCommunityData();
+    
+    // Set up periodic refresh to check for approval status changes
+    const refreshInterval = setInterval(() => {
+      fetchCommunityData();
+    }, 30000); // Check every 30 seconds
+    
+    // Clean up interval on component unmount
+    return () => clearInterval(refreshInterval);
   }, [id, router]);
 
   const fetchCommunityData = async () => {
@@ -149,7 +157,7 @@ export default function CommunityDetail({ params }) {
                 <div>
                   <div className="flex items-center">
                     <h1 className="text-3xl font-bold text-gray-800 mr-3">{community.name}</h1>
-                    {community.approved ? (
+                    {community.isApproved ? (
                       <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
                         Active
                       </span>

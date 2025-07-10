@@ -18,7 +18,12 @@ export default function Communities() {
   const [createFormData, setCreateFormData] = useState({
     name: '',
     description: '',
-    location: '',
+    location: {
+      address: '',
+      city: '',
+      state: '',
+      zipCode: ''
+    },
     rules: '',
   });
   const [joinReason, setJoinReason] = useState('');
@@ -33,10 +38,17 @@ export default function Communities() {
 
     // Fetch communities data
     fetchCommunities();
+    
+    // Set up periodic refresh to check for approval updates
+    const refreshInterval = setInterval(() => {
+      fetchCommunities();
+    }, 30000); // Check every 30 seconds
+    
+    // Clean up interval on component unmount
+    return () => clearInterval(refreshInterval);
   }, [router]);
 
   const fetchCommunities = async () => {
-    setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const [communitiesResponse, userResponse] = await Promise.all([
@@ -48,11 +60,51 @@ export default function Communities() {
         })
       ]);
 
-      setCommunities(communitiesResponse.data);
+      console.log('User data:', userResponse.data);
+      console.log('Communities data:', communitiesResponse.data);
+
+      // Check if we have a previous state to compare for approval changes
+      const previousCommunities = communities;
+      const newCommunities = communitiesResponse.data;
       
-      // Extract user's communities
-      if (userResponse.data.communities) {
+      // Update state with new data
+      setCommunities(newCommunities);
+      
+      // Extract user's community
+      if (userResponse.data.community) {
+        // Handle single community object
+        console.log('Setting user community from object:', userResponse.data.community);
+        setUserCommunities([userResponse.data.community]);
+      } else if (userResponse.data.communities) {
+        // For backward compatibility if the API returns communities array
+        console.log('Setting user communities from array:', userResponse.data.communities);
         setUserCommunities(userResponse.data.communities);
+      } else {
+        // Reset if user has no communities
+        console.log('User has no communities');
+        setUserCommunities([]);
+      }
+      
+      // If there's a previous state and we're not in initial loading
+      if (previousCommunities.length > 0 && !loading) {
+        // Check for newly approved communities
+        const newlyApproved = newCommunities.filter(
+          newComm => 
+            newComm.isApproved && 
+            previousCommunities.some(
+              oldComm => oldComm._id === newComm._id && !oldComm.isApproved
+            )
+        );
+        
+        // Notify about newly approved communities
+        if (newlyApproved.length > 0) {
+          // Show an alert for newly approved communities
+          newlyApproved.forEach(community => {
+            // Show a notification to the user
+            alert(`Good news! The community "${community.name}" has been approved and is now active.`);
+            console.log(`Community "${community.name}" has been approved!`);
+          });
+        }
       }
       
     } catch (error) {
@@ -65,10 +117,23 @@ export default function Communities() {
 
   const handleCreateInputChange = (e) => {
     const { name, value } = e.target;
-    setCreateFormData({
-      ...createFormData,
-      [name]: value,
-    });
+    
+    // Handle nested location object fields
+    if (name === 'address' || name === 'city' || name === 'state' || name === 'zipCode') {
+      setCreateFormData({
+        ...createFormData,
+        location: {
+          ...createFormData.location,
+          [name]: value
+        }
+      });
+    } else {
+      // Handle other fields normally
+      setCreateFormData({
+        ...createFormData,
+        [name]: value,
+      });
+    }
   };
 
   const handleCreateCommunity = async (e) => {
@@ -86,7 +151,12 @@ export default function Communities() {
       setCreateFormData({
         name: '',
         description: '',
-        location: '',
+        location: {
+          address: '',
+          city: '',
+          state: '',
+          zipCode: ''
+        },
         rules: '',
       });
       setShowCreateModal(false);
@@ -103,36 +173,134 @@ export default function Communities() {
   const handleJoinRequest = async (e) => {
     e.preventDefault();
     
-    if (!selectedCommunity) return;
+    if (!selectedCommunity) {
+      alert('No community selected.');
+      return;
+    }
+    
+    // Validate reason field - backend expects this!
+    if (!joinReason || joinReason.trim() === '') {
+      alert('Please provide a reason for wanting to join the community.');
+      return;
+    }
     
     try {
+      // Debug info
+      console.log('Joining community:', selectedCommunity._id);
+      console.log('User communities:', userCommunities);
+      
+      // Get the current user info to double-check membership status
       const token = localStorage.getItem('token');
-      await axios.post(
-        `http://localhost:5000/api/communities/${selectedCommunity._id}/join`,
-        { reason: joinReason },
+      const userData = await axios.get(
+        'http://localhost:5000/api/users/me',
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      
+      console.log('Current user data before join:', userData.data);
+      
+      // Check if already a member based on fresh user data
+      const userCurrentCommunity = userData.data.community;
+      if (userCurrentCommunity && userCurrentCommunity._id === selectedCommunity._id) {
+        alert('You are already a member of this community based on server data.');
+        setShowJoinModal(false);
+        return;
+      }
+      
+      // Check if already a member based on local state
+      if (isMemberOf(selectedCommunity._id)) {
+        alert('You are already a member of this community based on local data.');
+        setShowJoinModal(false);
+        return;
+      }
+      
+      // Log the request details before sending
+      console.log('Join request details:', {
+        communityId: selectedCommunity._id,
+        endpoint: `http://localhost:5000/api/communities/${selectedCommunity._id}/join`,
+        data: { reason: joinReason.trim() },
+        headers: { Authorization: `Bearer ${token && token.substring(0, 10)}...` }
+      });
+      
+      // Make sure the reason field is properly set
+      const requestPayload = { 
+        reason: joinReason.trim() 
+      };
+      
+      console.log('Final request payload:', requestPayload);
+      
+      const response = await axios.post(
+        `http://localhost:5000/api/communities/${selectedCommunity._id}/join`,
+        requestPayload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      console.log('Join response:', response.data);
       
       // Reset and close modal
       setJoinReason('');
       setSelectedCommunity(null);
       setShowJoinModal(false);
       
-      alert('Join request submitted successfully!');
+      // Refresh communities to get updated membership status
+      fetchCommunities();
+      
+      alert(response.data.message || 'Join request submitted successfully!');
       
     } catch (error) {
       console.error('Error submitting join request:', error);
-      alert('Failed to submit join request. Please try again.');
+      
+      // Log detailed error information
+      console.log('Error response status:', error.response?.status);
+      console.log('Error response data:', error.response?.data);
+      console.log('Error config:', error.config);
+      
+      // Get specific error message from the API response if available
+      const errorMessage = error.response?.data?.message || 
+                          'Failed to submit join request. Please try again.';
+      
+      // Show error with more context
+      alert(`Error ${error.response?.status || ''}: ${errorMessage}`);
     }
   };
 
   const openJoinModal = (community) => {
+    console.log('Opening join modal for community:', community);
+    
+    // Make sure we have the complete community data
+    if (!community || !community._id) {
+      alert('Cannot join community: incomplete community data');
+      return;
+    }
+    
     setSelectedCommunity(community);
+    setJoinReason(''); // Reset reason field when opening modal
     setShowJoinModal(true);
   };
 
   const isMemberOf = (communityId) => {
-    return userCommunities.some(c => c === communityId);
+    console.log('Checking if member of community:', communityId);
+    console.log('User communities:', userCommunities);
+    
+    if (!userCommunities || userCommunities.length === 0) {
+      console.log('User has no communities, not a member');
+      return false;
+    }
+    
+    // For debugging, check each community explicitly
+    for (const community of userCommunities) {
+      if (community && typeof community === 'object') {
+        const isMatch = community._id === communityId;
+        console.log(`Comparing object community ${community._id} with ${communityId}: ${isMatch}`);
+        if (isMatch) return true;
+      } else if (typeof community === 'string') {
+        const isMatch = community === communityId;
+        console.log(`Comparing string community ${community} with ${communityId}: ${isMatch}`);
+        if (isMatch) return true;
+      }
+    }
+    
+    console.log('Not a member of this community');
+    return false;
   };
 
   return (
@@ -169,7 +337,7 @@ export default function Communities() {
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <h3 className="text-xl font-semibold">{community.name}</h3>
-                    {community.approved ? (
+                    {community.isApproved ? (
                       <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Active</span>
                     ) : (
                       <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Pending Approval</span>
@@ -215,10 +383,10 @@ export default function Communities() {
                     <button
                       className="w-full btn-primary flex justify-center items-center"
                       onClick={() => openJoinModal(community)}
-                      disabled={!community.approved}
+                      disabled={!community.isApproved}
                     >
                       <FaUserPlus className="mr-2" /> 
-                      {community.approved ? 'Request to Join' : 'Pending Approval'}
+                      {community.isApproved ? 'Request to Join' : 'Pending Approval'}
                     </button>
                   )}
                 </div>
@@ -265,19 +433,75 @@ export default function Communities() {
               </div>
               
               <div className="mb-4">
-                <label htmlFor="location" className="block text-gray-700 font-medium mb-2">
+                <label className="block text-gray-700 font-medium mb-2">
                   Location
                 </label>
-                <input
-                  type="text"
-                  id="location"
-                  name="location"
-                  value={createFormData.location}
-                  onChange={handleCreateInputChange}
-                  required
-                  className="input-field"
-                  placeholder="e.g. 123 Main Street, City, State"
-                />
+                <div className="space-y-3">
+                  <div>
+                    <label htmlFor="address" className="block text-gray-600 text-sm mb-1">
+                      Street Address
+                    </label>
+                    <input
+                      type="text"
+                      id="address"
+                      name="address"
+                      value={createFormData.location.address}
+                      onChange={handleCreateInputChange}
+                      className="input-field"
+                      placeholder="e.g. 123 Main Street"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label htmlFor="city" className="block text-gray-600 text-sm mb-1">
+                        City
+                      </label>
+                      <input
+                        type="text"
+                        id="city"
+                        name="city"
+                        value={createFormData.location.city}
+                        onChange={handleCreateInputChange}
+                        required
+                        className="input-field"
+                        placeholder="e.g. Springfield"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="state" className="block text-gray-600 text-sm mb-1">
+                        State
+                      </label>
+                      <input
+                        type="text"
+                        id="state"
+                        name="state"
+                        value={createFormData.location.state}
+                        onChange={handleCreateInputChange}
+                        required
+                        className="input-field"
+                        placeholder="e.g. IL"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="zipCode" className="block text-gray-600 text-sm mb-1">
+                        ZIP Code
+                      </label>
+                      <input
+                        type="text"
+                        id="zipCode"
+                        name="zipCode"
+                        value={createFormData.location.zipCode}
+                        onChange={handleCreateInputChange}
+                        required
+                        className="input-field"
+                        placeholder="e.g. 12345"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <div className="mb-4">
