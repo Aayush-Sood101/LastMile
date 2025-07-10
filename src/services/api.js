@@ -101,7 +101,7 @@ export const cartService = {
   }
 };
 
-// Communities services
+// Community services
 export const communityService = {
   getAllCommunities: async () => {
     const response = await api.get('/communities');
@@ -119,8 +119,72 @@ export const communityService = {
     const response = await api.post(`/communities/${communityId}/join`);
     return response.data;
   },
-  approveJoinRequest: async (communityId, requestId, status) => {
-    const response = await api.put(`/communities/${communityId}/requests/${requestId}`, { status });
+  getMembershipRequests: async (communityId) => {
+    const response = await api.get(`/communities/${communityId}/membership-requests`);
+    return response.data;
+  },
+  handleMembershipRequest: async (communityId, userId, status) => {
+    const response = await api.put(`/communities/${communityId}/membership-requests/${userId}`, { status });
+    return response.data;
+  }
+};
+
+// Community cart services
+export const communityCartService = {
+  getMyCommunityCart: async () => {
+    const response = await api.get('/community-carts/my-community');
+    return response.data;
+  },
+  getCommunityCartById: async (communityId) => {
+    const response = await api.get(`/community-carts/community/${communityId}`);
+    return response.data;
+  },
+  addItem: async (productId, quantity) => {
+    const response = await api.post('/community-carts/add-item', { productId, quantity });
+    return response.data;
+  },
+  updateItem: async (productId, quantity) => {
+    const response = await api.put('/community-carts/update-item', { productId, quantity });
+    return response.data;
+  },
+  removeItem: async (productId) => {
+    const response = await api.delete(`/community-carts/remove-item/${productId}`);
+    return response.data;
+  },
+  lockCart: async (communityId) => {
+    const response = await api.put(`/community-carts/lock/${communityId}`);
+    return response.data;
+  }
+};
+
+// Delivery cycle services
+export const deliveryCycleService = {
+  getAllDeliveryCycles: async () => {
+    const response = await api.get('/delivery-cycles');
+    return response.data;
+  },
+  getUpcomingDeliveryCycles: async () => {
+    const response = await api.get('/delivery-cycles/upcoming');
+    return response.data;
+  },
+  getCommunityDeliveryCycles: async (communityId) => {
+    const response = await api.get(`/delivery-cycles/community/${communityId}`);
+    return response.data;
+  },
+  getDeliveryCycleById: async (id) => {
+    const response = await api.get(`/delivery-cycles/${id}`);
+    return response.data;
+  },
+  createDeliveryCycle: async (data) => {
+    const response = await api.post('/delivery-cycles', data);
+    return response.data;
+  },
+  updateDeliveryCycleStatus: async (id, status) => {
+    const response = await api.put(`/delivery-cycles/${id}/status`, { status });
+    return response.data;
+  },
+  getProductRequirements: async (id) => {
+    const response = await api.get(`/delivery-cycles/${id}/requirements`);
     return response.data;
   }
 };
@@ -169,6 +233,10 @@ export const adminService = {
   },
   getUserStats: async () => {
     const response = await api.get('/admin/user-stats');
+    return response.data;
+  },
+  getAllCommunities: async () => {
+    const response = await api.get('/admin/communities');
     return response.data;
   }
 };

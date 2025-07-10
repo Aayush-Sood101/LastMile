@@ -4,14 +4,18 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
+import { useCommunityCart } from '@/context/CommunityCartContext';
 import { useAuth } from '@/context/AuthContext';
 
 export default function ProductCard({ product }) {
   const [quantity, setQuantity] = useState(1);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isAddingToCommunityCart, setIsAddingToCommunityCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [addedToCommunityCart, setAddedToCommunityCart] = useState(false);
   const { addItem } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { addItem: addToCommunityCart } = useCommunityCart();
+  const { isAuthenticated, user } = useAuth();
 
   // Handle quantity change
   const handleQuantityChange = (e) => {
@@ -42,12 +46,35 @@ export default function ProductCard({ product }) {
     }
   };
 
+  // Add to community cart handler
+  const handleAddToCommunityCart = async () => {
+    if (!isAuthenticated) {
+      // Redirect to login
+      window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+      return;
+    }
+    
+    setIsAddingToCommunityCart(true);
+    try {
+      const result = await addToCommunityCart(product._id, quantity);
+      if (result.success) {
+        setAddedToCommunityCart(true);
+        // Reset the added to community cart status after 3 seconds
+        setTimeout(() => setAddedToCommunityCart(false), 3000);
+      }
+    } catch (error) {
+      console.error('Error adding to community cart:', error);
+    } finally {
+      setIsAddingToCommunityCart(false);
+    }
+  };
+
   // Community discount badge
   const CommunityDiscountBadge = () => {
-    if (product.communityDiscount && product.communityDiscount > 0) {
+    if (product.communityDiscountPercentage && product.communityDiscountPercentage > 0) {
       return (
         <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-          Community Discount: {product.communityDiscount}%
+          Community Discount: {product.communityDiscountPercentage}%
         </div>
       );
     }
@@ -136,23 +163,45 @@ export default function ProductCard({ product }) {
             />
           </div>
           
-          <button
-            onClick={handleAddToCart}
-            disabled={isAddingToCart}
-            className={`ml-3 py-2 px-3 rounded-md transition-colors ${
-              addedToCart
-                ? 'bg-green-500 text-white'
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
-          >
-            {isAddingToCart ? (
-              <span>Adding...</span>
-            ) : addedToCart ? (
-              <span>Added ✓</span>
-            ) : (
-              <span>Add to Cart</span>
+          <div className="flex space-x-2">
+            <button
+              onClick={handleAddToCart}
+              disabled={isAddingToCart}
+              className={`py-2 px-3 rounded-md transition-colors ${
+                addedToCart
+                  ? 'bg-green-500 text-white'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {isAddingToCart ? (
+                <span>Adding...</span>
+              ) : addedToCart ? (
+                <span>Added ✓</span>
+              ) : (
+                <span>Add to Cart</span>
+              )}
+            </button>
+            
+            {user?.community && (
+              <button
+                onClick={handleAddToCommunityCart}
+                disabled={isAddingToCommunityCart}
+                className={`py-2 px-3 rounded-md transition-colors ${
+                  addedToCommunityCart
+                    ? 'bg-green-500 text-white'
+                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                }`}
+              >
+                {isAddingToCommunityCart ? (
+                  <span>Adding...</span>
+                ) : addedToCommunityCart ? (
+                  <span>Added ✓</span>
+                ) : (
+                  <span>Community</span>
+                )}
+              </button>
             )}
-          </button>
+          </div>
         </div>
       </div>
     </div>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-import { productService, communityService, orderService } from '@/services/api';
+import { productService, communityService, orderService, deliveryCycleService, communityCartService } from '@/services/api';
 
 export default function Dashboard() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -16,6 +16,9 @@ export default function Dashboard() {
   const [userCommunity, setUserCommunity] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [carbonStats, setCarbonStats] = useState(null);
+  const [communityCart, setCommunityCart] = useState(null);
+  const [upcomingDeliveries, setUpcomingDeliveries] = useState([]);
+  const [membershipRequests, setMembershipRequests] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState(null);
 
@@ -42,10 +45,38 @@ export default function Dashboard() {
           setCommunities(communitiesData);
           
           // Check if user is in any community
-          if (user.communityId) {
+          if (user.community) {
             try {
-              const userCommunityData = await communityService.getCommunityById(user.communityId);
+              const userCommunityData = await communityService.getCommunityById(user.community);
               setUserCommunity(userCommunityData);
+              
+              // Get community cart
+              try {
+                const communityCartData = await communityCartService.getMyCommunityCart();
+                setCommunityCart(communityCartData);
+              } catch (cartErr) {
+                console.error('Error fetching community cart:', cartErr);
+              }
+              
+              // Get upcoming deliveries for this community
+              try {
+                const deliveriesData = await deliveryCycleService.getCommunityDeliveryCycles(user.community);
+                setUpcomingDeliveries(
+                  deliveriesData.filter(d => d.status !== 'completed' && d.status !== 'cancelled')
+                );
+              } catch (delErr) {
+                console.error('Error fetching upcoming deliveries:', delErr);
+              }
+              
+              // If user is a community admin, get membership requests
+              if (user.isCommunityAdmin) {
+                try {
+                  const requestsData = await communityService.getMembershipRequests(user.community);
+                  setMembershipRequests(requestsData);
+                } catch (reqErr) {
+                  console.error('Error fetching membership requests:', reqErr);
+                }
+              }
             } catch (err) {
               console.error('Error fetching user community:', err);
             }
@@ -372,6 +403,119 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* Community Admin Section */}
+        {user?.isCommunityAdmin && userCommunity && (
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Community Admin</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Membership Requests */}
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-3">Membership Requests</h3>
+                {membershipRequests.length === 0 ? (
+                  <p className="text-gray-500">No pending membership requests</p>
+                ) : (
+                  <div>
+                    <p className="text-gray-500 mb-3">
+                      You have {membershipRequests.length} pending membership {membershipRequests.length === 1 ? 'request' : 'requests'}
+                    </p>
+                    <Link
+                      href="/communities/requests"
+                      className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                    >
+                      Manage Requests
+                    </Link>
+                  </div>
+                )}
+              </div>
+              
+              {/* Community Cart Status */}
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-3">Community Cart</h3>
+                {!communityCart ? (
+                  <p className="text-gray-500">No active community cart</p>
+                ) : (
+                  <div>
+                    <p className="text-gray-500 mb-1">
+                      {communityCart.items.length} {communityCart.items.length === 1 ? 'product' : 'products'} in cart
+                    </p>
+                    <p className="text-gray-500 mb-3">
+                      Total value: ${communityCart.totalPrice.toFixed(2)}
+                    </p>
+                    <div className="flex space-x-3">
+                      <Link
+                        href="/communities/cart"
+                        className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                      >
+                        View Cart
+                      </Link>
+                      {!communityCart.isLocked && (
+                        <Link
+                          href="/communities/cart"
+                          className="inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                        >
+                          Lock for Delivery
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Community Member Section */}
+        {userCommunity && !user?.isCommunityAdmin && (
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Your Community</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Community Info */}
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-3">{userCommunity.name}</h3>
+                <p className="text-gray-500 mb-1">
+                  {userCommunity.members?.length || 0} members
+                </p>
+                <p className="text-gray-500 mb-3">
+                  Admin: {userCommunity.admin?.name || 'Unknown'}
+                </p>
+                <Link
+                  href="/communities/cart"
+                  className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                >
+                  Community Cart
+                </Link>
+              </div>
+              
+              {/* Upcoming Deliveries */}
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-3">Upcoming Deliveries</h3>
+                {upcomingDeliveries.length === 0 ? (
+                  <p className="text-gray-500">No upcoming deliveries scheduled</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {upcomingDeliveries.map(delivery => (
+                      <li key={delivery._id} className="flex justify-between items-center">
+                        <span>
+                          {new Date(delivery.scheduledDate).toLocaleDateString()} 
+                          <span className="ml-2 text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                            {delivery.status}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Create Community CTA */}
         {!userCommunity && (

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { adminService } from '@/services/api';
+import { adminService, walmartAdminService, deliveryCycleService } from '@/services/api';
 
 export default function AdminDashboard() {
   const { user, isAuthenticated, loading, isWalmart } = useAuth();
@@ -12,6 +12,10 @@ export default function AdminDashboard() {
   
   const [dashboardData, setDashboardData] = useState(null);
   const [pendingCommunities, setPendingCommunities] = useState([]);
+  const [allCommunities, setAllCommunities] = useState([]);
+  const [upcomingDeliveries, setUpcomingDeliveries] = useState([]);
+  const [selectedDelivery, setSelectedDelivery] = useState(null);
+  const [productRequirements, setProductRequirements] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState(null);
 
@@ -37,6 +41,14 @@ export default function AdminDashboard() {
           const communitiesData = await adminService.getCommunityRequests();
           setPendingCommunities(communitiesData);
           
+          // Fetch all communities
+          const allCommunitiesResult = await walmartAdminService.getAllCommunities();
+          setAllCommunities(allCommunitiesResult);
+          
+          // Fetch upcoming deliveries
+          const upcomingDeliveriesResult = await deliveryCycleService.getUpcomingDeliveryCycles();
+          setUpcomingDeliveries(upcomingDeliveriesResult);
+          
         } catch (err) {
           setError('Failed to load admin dashboard data');
           console.error('Admin dashboard data error:', err);
@@ -49,17 +61,76 @@ export default function AdminDashboard() {
     }
   }, [isAuthenticated, isWalmart]);
 
-  // Handle community approval/rejection
-  const handleCommunityApproval = async (communityId, status) => {
+  // Handle delivery cycle status update
+  const handleUpdateDeliveryStatus = async (deliveryId, status) => {
     try {
-      await adminService.approveCommunity(communityId, status);
+      await deliveryCycleService.updateDeliveryCycleStatus(deliveryId, status);
       
-      // Update the list to remove the approved/rejected community
-      setPendingCommunities(pendingCommunities.filter(community => community._id !== communityId));
+      // Update local state
+      setUpcomingDeliveries(prev => 
+        prev.map(delivery => 
+          delivery._id === deliveryId 
+            ? { ...delivery, status } 
+            : delivery
+        )
+      );
       
+      if (selectedDelivery?._id === deliveryId) {
+        setSelectedDelivery(prev => ({ ...prev, status }));
+      }
     } catch (err) {
-      setError(`Failed to ${status} community`);
-      console.error(`Community ${status} error:`, err);
+      setError('Failed to update delivery status');
+      console.error('Update delivery status error:', err);
+    }
+  };
+
+  // Handle community approval
+  const handleApproveCommunity = async (communityId) => {
+    try {
+      await adminService.approveCommunity(communityId);
+      
+      // Update local state
+      setPendingCommunities(prev => 
+        prev.filter(community => community._id !== communityId)
+      );
+    } catch (err) {
+      setError('Failed to approve community');
+      console.error('Approve community error:', err);
+    }
+  };
+
+  // Handle selecting a delivery to view requirements
+  const handleViewRequirements = async (deliveryId) => {
+    try {
+      const delivery = upcomingDeliveries.find(d => d._id === deliveryId);
+      setSelectedDelivery(delivery);
+      
+      const { productRequirements: requirements } = await deliveryCycleService.getProductRequirements(deliveryId);
+      setProductRequirements(requirements);
+    } catch (err) {
+      setError('Failed to fetch product requirements');
+      console.error('Product requirements error:', err);
+    }
+  };
+
+  // Create a new delivery cycle
+  const handleCreateDeliveryCycle = async (communityId) => {
+    try {
+      // Calculate a date 7 days from now
+      const date = new Date();
+      date.setDate(date.getDate() + 7);
+      
+      await deliveryCycleService.createDeliveryCycle({
+        communityId,
+        scheduledDate: date.toISOString()
+      });
+      
+      // Refresh upcoming deliveries
+      const upcomingDeliveriesResult = await deliveryCycleService.getUpcomingDeliveryCycles();
+      setUpcomingDeliveries(upcomingDeliveriesResult);
+    } catch (err) {
+      setError('Failed to create delivery cycle');
+      console.error('Create delivery cycle error:', err);
     }
   };
 
@@ -78,7 +149,7 @@ export default function AdminDashboard() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Walmart Admin Dashboard</h1>
           <p className="text-gray-600">
-            Manage communities, view orders, and track environmental impact
+            Manage communities, delivery cycles, and monitor performance
           </p>
         </div>
 
@@ -90,145 +161,87 @@ export default function AdminDashboard() {
         )}
 
         {/* Stats Cards */}
-        {loadingData ? (
-          <div className="flex justify-center py-10">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        ) : dashboardData ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            {/* Total Communities */}
+        {dashboardData && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-gray-500 text-sm uppercase">Communities</h3>
-                  <p className="text-2xl font-semibold mt-1">{dashboardData.totalCommunities}</p>
-                </div>
-                <div className="bg-blue-100 p-3 rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-              </div>
-              <div className="mt-4 text-sm text-gray-600">
-                <p>{dashboardData.pendingCommunities} pending approvals</p>
-              </div>
+              <h3 className="text-gray-500 text-sm uppercase">Carbon Footprint Saved</h3>
+              <p className="text-2xl font-semibold mt-1">
+                {dashboardData.totalCarbonFootprintSaved.toFixed(1)} kg CO₂
+              </p>
             </div>
             
-            {/* Total Users */}
             <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-gray-500 text-sm uppercase">Users</h3>
-                  <p className="text-2xl font-semibold mt-1">{dashboardData.totalUsers}</p>
-                </div>
-                <div className="bg-purple-100 p-3 rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-              </div>
-              <div className="mt-4 text-sm text-gray-600">
-                <p>{dashboardData.newUsersThisMonth} new this month</p>
-              </div>
+              <h3 className="text-gray-500 text-sm uppercase">Pending Communities</h3>
+              <p className="text-2xl font-semibold mt-1">
+                {pendingCommunities.length}
+              </p>
             </div>
             
-            {/* Total Orders */}
             <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-gray-500 text-sm uppercase">Total Orders</h3>
-                  <p className="text-2xl font-semibold mt-1">{dashboardData.totalOrders}</p>
-                </div>
-                <div className="bg-orange-100 p-3 rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                  </svg>
-                </div>
-              </div>
-              <div className="mt-4 text-sm text-gray-600">
-                <p>${dashboardData.totalRevenue?.toFixed(2)} total revenue</p>
-              </div>
-            </div>
-            
-            {/* Carbon Footprint */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-gray-500 text-sm uppercase">Carbon Footprint Saved</h3>
-                  <p className="text-2xl font-semibold mt-1">{dashboardData.totalCarbonSaved?.toFixed(2)} kg</p>
-                </div>
-                <div className="bg-green-100 p-3 rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-              <div className="mt-4 text-sm text-gray-600">
-                <p>Equivalent to planting {(dashboardData.totalCarbonSaved / 20).toFixed(0)} trees</p>
-              </div>
+              <h3 className="text-gray-500 text-sm uppercase">Upcoming Deliveries</h3>
+              <p className="text-2xl font-semibold mt-1">
+                {upcomingDeliveries.length}
+              </p>
             </div>
           </div>
-        ) : null}
+        )}
 
         {/* Pending Community Approvals */}
         <div className="mb-10">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Pending Community Approvals</h2>
-            <Link 
-              href="/dashboard/admin/communities" 
-              className="text-blue-600 hover:text-blue-800 font-semibold"
-            >
-              View All →
-            </Link>
+            <h2 className="text-2xl font-bold">Community Requests</h2>
           </div>
           
-          {loadingData ? (
-            <div className="flex justify-center py-10">
-              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+          {pendingCommunities.length === 0 ? (
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <p className="text-gray-500">No pending community requests</p>
             </div>
-          ) : pendingCommunities.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white rounded-lg shadow">
-                <thead>
-                  <tr className="bg-gray-100 text-gray-700 uppercase text-sm">
-                    <th className="py-3 px-4 text-left">Community Name</th>
-                    <th className="py-3 px-4 text-left">Location</th>
-                    <th className="py-3 px-4 text-left">Admin</th>
-                    <th className="py-3 px-4 text-left">Date Requested</th>
-                    <th className="py-3 px-4 text-left">Action</th>
+          ) : (
+            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Community</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admin</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="text-gray-600 text-sm">
-                  {pendingCommunities.map(community => (
-                    <tr key={community._id} className="border-b border-gray-200 hover:bg-gray-50">
-                      <td className="py-4 px-4 font-medium">{community.name}</td>
-                      <td className="py-4 px-4">{community.location.city}, {community.location.state}</td>
-                      <td className="py-4 px-4">{community.admin.name}</td>
-                      <td className="py-4 px-4">{new Date(community.createdAt).toLocaleDateString()}</td>
-                      <td className="py-4 px-4">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleCommunityApproval(community._id, 'approved')}
-                            className="bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded-md text-xs"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleCommunityApproval(community._id, 'rejected')}
-                            className="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-md text-xs"
-                          >
-                            Reject
-                          </button>
+                <tbody className="divide-y divide-gray-200">
+                  {pendingCommunities.map((community) => (
+                    <tr key={community._id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-medium text-gray-900">
+                          {community.name}
                         </div>
+                        <div className="text-gray-500 text-sm">
+                          {community.description.substring(0, 40)}...
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{community.admin.name}</div>
+                        <div className="text-sm text-gray-500">{community.admin.email}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{community.location.city}</div>
+                        <div className="text-sm text-gray-500">{community.location.zipCode}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(community.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => handleApproveCommunity(community._id)}
+                          className="text-green-600 hover:text-green-900"
+                        >
+                          Approve
+                        </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          ) : (
-            <div className="bg-gray-50 rounded-lg p-6 text-center">
-              <p className="text-gray-600">No pending community approval requests.</p>
             </div>
           )}
         </div>
@@ -340,6 +353,258 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Delivery Cycles */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Upcoming Delivery Cycles</h2>
+          </div>
+          
+          {upcomingDeliveries.length === 0 ? (
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <p className="text-gray-500">No upcoming delivery cycles</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Community</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {upcomingDeliveries.map((delivery) => (
+                    <tr key={delivery._id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-medium text-gray-900">
+                          {delivery.community.name}
+                        </div>
+                        <div className="text-gray-500 text-sm">
+                          {delivery.community.location?.zipCode}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(delivery.scheduledDate).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                          ${delivery.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' : 
+                            delivery.status === 'in-progress' ? 'bg-blue-100 text-blue-800' : 
+                            delivery.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                            'bg-red-100 text-red-800'}`}>
+                          {delivery.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex justify-end space-x-3">
+                          <button
+                            onClick={() => handleViewRequirements(delivery._id)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            View Requirements
+                          </button>
+                          {delivery.status === 'scheduled' && (
+                            <button
+                              onClick={() => handleUpdateDeliveryStatus(delivery._id, 'in-progress')}
+                              className="text-green-600 hover:text-green-900"
+                            >
+                              Start
+                            </button>
+                          )}
+                          {delivery.status === 'in-progress' && (
+                            <button
+                              onClick={() => handleUpdateDeliveryStatus(delivery._id, 'completed')}
+                              className="text-green-600 hover:text-green-900"
+                            >
+                              Complete
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Communities */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Active Communities</h2>
+          </div>
+          
+          {allCommunities.filter(c => c.isApproved).length === 0 ? (
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <p className="text-gray-500">No active communities</p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Community</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Members</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Upcoming Delivery</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {allCommunities
+                    .filter(community => community.isApproved)
+                    .map((community) => (
+                    <tr key={community._id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-medium text-gray-900">
+                          {community.name}
+                        </div>
+                        <div className="text-gray-500 text-sm">
+                          {community.location.city}, {community.location.zipCode}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {community.memberCount || community.members?.length || 0}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {community.upcomingDelivery ? (
+                          <div className="text-sm text-gray-900">
+                            {new Date(community.upcomingDelivery.date).toLocaleDateString()}
+                            <span className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                              ${community.upcomingDelivery.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' : 
+                                community.upcomingDelivery.status === 'in-progress' ? 'bg-blue-100 text-blue-800' : 
+                                'bg-red-100 text-red-800'}`}>
+                              {community.upcomingDelivery.status}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-500">None scheduled</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        {!community.upcomingDelivery && (
+                          <button
+                            onClick={() => handleCreateDeliveryCycle(community._id)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            Schedule Delivery
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Product Requirements Modal */}
+        {selectedDelivery && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold">
+                  Product Requirements for {selectedDelivery.community.name}
+                </h3>
+                <button
+                  onClick={() => setSelectedDelivery(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="mt-4">
+                <div className="flex justify-between mb-2">
+                  <div className="text-gray-700">
+                    <strong>Delivery Date:</strong> {new Date(selectedDelivery.scheduledDate).toLocaleDateString()}
+                  </div>
+                  <div className="text-gray-700">
+                    <strong>Status:</strong> {selectedDelivery.status}
+                  </div>
+                </div>
+                
+                {productRequirements.length === 0 ? (
+                  <p className="text-gray-500 py-4">No products in this delivery</p>
+                ) : (
+                  <table className="min-w-full divide-y divide-gray-200 mt-4">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Price</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {productRequirements.map((item) => (
+                        <tr key={item.product._id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {item.product.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {item.product.category}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                            {item.quantity}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                            ${item.totalPrice.toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="bg-gray-50">
+                        <td colSpan="3" className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          Total:
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold">
+                          ${productRequirements.reduce((sum, item) => sum + item.totalPrice, 0).toFixed(2)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => setSelectedDelivery(null)}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded mr-2"
+                >
+                  Close
+                </button>
+                
+                {selectedDelivery.status === 'scheduled' && (
+                  <button
+                    onClick={() => {
+                      handleUpdateDeliveryStatus(selectedDelivery._id, 'in-progress');
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Start Delivery
+                  </button>
+                )}
+                
+                {selectedDelivery.status === 'in-progress' && (
+                  <button
+                    onClick={() => {
+                      handleUpdateDeliveryStatus(selectedDelivery._id, 'completed');
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Mark as Completed
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
