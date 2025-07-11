@@ -62,12 +62,34 @@ export default function AdminDashboard() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     
     if (!token || user.role !== 'walmart') {
-      router.push('/');
+      router.push('/auth/login');
       return;
     }
 
-    // Load initial data based on active tab
-    loadTabData(activeTab);
+    // Verify token validity with the server
+    const verifyToken = async () => {
+      try {
+        // Use the dashboard endpoint that we know exists to verify the token
+        await axios.get('http://localhost:5000/api/admin/dashboard', {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        // If successful, load initial data
+        loadTabData(activeTab);
+      } catch (error) {
+        console.error('Token verification failed:', error);
+        showToast('Your session has expired. Please login again.', 'error');
+        // If token is invalid, redirect to login
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        router.push('/auth/login');
+      }
+    };
+
+    verifyToken();
   }, [router]);
 
   // Show toast message
@@ -128,9 +150,16 @@ export default function AdminDashboard() {
           break;
 
         case 'products':
+          console.log('Loading products with token:', token);
+          
+          // For Walmart admin, use the regular products endpoint
           const productsResponse = await axios.get(
             'http://localhost:5000/api/products',
-            { headers: { Authorization: `Bearer ${token}` } }
+            { 
+              headers: { 
+                'Authorization': `Bearer ${token}`
+              }
+            }
           );
           setProducts(productsResponse.data);
           break;
@@ -253,31 +282,62 @@ export default function AdminDashboard() {
       return;
     }
     
+    // Verify token exists
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showToast('Authentication token not found. Please log in again.', 'error');
+      router.push('/auth/login');
+      return;
+    }
+
+    // Get user role for additional verification
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user.role !== 'walmart') {
+      showToast('You do not have permission to perform this action.', 'error');
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
-      const token = localStorage.getItem('token');
       const productData = {
         ...productForm,
         price: parseFloat(productForm.price),
         inventory: parseInt(productForm.inventory)
       };
       
+      // Add proper headers with token
+      const config = {
+        headers: { 
+          'Authorization': `Bearer ${token}`
+        }
+      };
+      
       if (isEditing && currentProduct) {
         // Update existing product
+        console.log('Updating product with ID:', currentProduct._id);
+        console.log('Using token:', token);
+        console.log('Product data:', productData);
+        
+        // For Walmart admin, use the regular products endpoint but with token
         await axios.put(
           `http://localhost:5000/api/products/${currentProduct._id}`,
           productData,
-          { headers: { Authorization: `Bearer ${token}` } }
+          config
         );
         
         showToast('Product updated successfully!');
       } else {
         // Create new product
+        console.log('Creating new product');
+        console.log('Using token:', token);
+        console.log('Product data:', productData);
+        
+        // For Walmart admin, use the regular products endpoint but with token
         await axios.post(
           'http://localhost:5000/api/products',
           productData,
-          { headers: { Authorization: `Bearer ${token}` } }
+          config
         );
         
         showToast('Product created successfully!');
@@ -301,13 +361,38 @@ export default function AdminDashboard() {
       return;
     }
     
+    // Verify token exists
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showToast('Authentication token not found. Please log in again.', 'error');
+      router.push('/auth/login');
+      return;
+    }
+    
+    // Verify user role
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user.role !== 'walmart') {
+      showToast('You do not have permission to perform this action.', 'error');
+      return;
+    }
+    
     setLoading(true);
     
     try {
-      const token = localStorage.getItem('token');
+      // Add proper headers with token - remove content-type for DELETE requests
+      const config = {
+        headers: { 
+          'Authorization': `Bearer ${token}`
+        }
+      };
+      
+      console.log('Deleting product with ID:', productId);
+      console.log('Using token:', token);
+      
+      // For Walmart admin, use the regular products endpoint but with token
       await axios.delete(
         `http://localhost:5000/api/products/${productId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        config
       );
       
       // Refresh products list
