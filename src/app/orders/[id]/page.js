@@ -169,12 +169,12 @@ export default function OrderDetails({ params }) {
                   </div>
                 )}
                 
-                {order.carbonFootprintSaved > 0 && (
+                {order.carbonFootprintSaved && order.carbonFootprintSaved > 0 && (
                   <div className="flex items-center text-sm mt-3">
                     <FaLeaf className="text-green-600 mr-2" />
                     <span className="text-gray-700">Carbon Saved: </span>
                     <span className="ml-2 font-medium text-green-600">
-                      {order.carbonFootprintSaved.toFixed(2)} kg
+                      {(order.carbonFootprintSaved || 0).toFixed(2)} kg
                     </span>
                   </div>
                 )}
@@ -208,32 +208,32 @@ export default function OrderDetails({ params }) {
                       <tr key={index}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            {item.product.imageUrl && (
+                            {item.product && item.product.imageUrl && (
                               <img 
                                 src={item.product.imageUrl} 
-                                alt={item.product.name} 
+                                alt={item.product?.name || 'Product'} 
                                 className="w-10 h-10 object-cover rounded-md mr-3"
                               />
                             )}
                             <div>
                               <div className="text-sm font-medium text-gray-900">
-                                {item.product.name}
+                                {item.product?.name || 'Unknown Product'}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {item.product.category}
+                                {item.product?.category || 'Uncategorized'}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{item.quantity}</div>
+                          <div className="text-sm text-gray-900">{item.quantity || 1}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">${(item.price || item.product.price).toFixed(2)}</div>
+                          <div className="text-sm text-gray-900">${(item.price || (item.product && item.product.price) || 0).toFixed(2)}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium">
-                            ${((item.price || item.product.price) * item.quantity).toFixed(2)}
+                            ${((item.price || (item.product && item.product.price) || 0) * (item.quantity || 1)).toFixed(2)}
                           </div>
                         </td>
                       </tr>
@@ -249,10 +249,10 @@ export default function OrderDetails({ params }) {
                   <span className="font-medium">${order.subtotalPrice?.toFixed(2) || (order.totalAmount?.toFixed(2) || '0.00')}</span>
                 </div>
                 
-                {order.discountAmount > 0 && (
+                {order.discountAmount && order.discountAmount > 0 && (
                   <div className="flex justify-between mb-2">
                     <span className="text-gray-600">Discount:</span>
-                    <span className="font-medium text-green-600">-${order.discountAmount.toFixed(2)}</span>
+                    <span className="font-medium text-green-600">-${(order.discountAmount || 0).toFixed(2)}</span>
                   </div>
                 )}
                 

@@ -63,6 +63,9 @@ export default function OrdersList() {
   };
 
   const getStatusClass = (status) => {
+    // Use default status if none is provided
+    if (!status) status = 'pending';
+    
     switch (status) {
       case 'processing':
         return 'bg-blue-100 text-blue-800';
@@ -163,8 +166,8 @@ export default function OrdersList() {
               
               <div className="flex items-center justify-between md:justify-end w-full md:w-auto">
                 <div className="flex items-center md:mr-6">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusClass(order.status)}`}>
-                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusClass(order.status || 'pending')}`}>
+                    {(order.status || 'pending').charAt(0).toUpperCase() + (order.status || 'pending').slice(1)}
                   </span>
                   {order.isGroupOrder && (
                     <span className="ml-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -177,7 +180,7 @@ export default function OrdersList() {
                 </div>
                 
                 <div className="flex items-center">
-                  <div className="font-medium text-lg text-gray-800 mr-3">${order.totalAmount.toFixed(2)}</div>
+                  <div className="font-medium text-lg text-gray-800 mr-3">${(order.totalAmount || 0).toFixed(2)}</div>
                   <div className="bg-gray-100 group-hover:bg-gray-200 rounded-full p-2 transition-colors duration-150">
                     <FaAngleRight className="text-gray-600" />
                   </div>
@@ -187,16 +190,16 @@ export default function OrdersList() {
             
             <div className="mt-3 flex flex-wrap items-center">
               <div className="text-sm text-gray-500 mr-4">
-                <span className="font-medium text-gray-700">{order.items.length}</span> {order.items.length === 1 ? 'item' : 'items'}
+                <span className="font-medium text-gray-700">{order.items?.length || 0}</span> {(order.items?.length || 0) === 1 ? 'item' : 'items'}
               </div>
               
-              {order.items.slice(0, 3).map((item, index) => (
+              {order.items && order.items.slice(0, 3).map((item, index) => (
                 <div key={index} className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-md mr-2 mt-2">
-                  {item.product.name.length > 15 ? item.product.name.substring(0, 15) + '...' : item.product.name} (x{item.quantity})
+                  {item.product?.name?.length > 15 ? item.product.name.substring(0, 15) + '...' : item.product?.name || 'Product'} (x{item.quantity || 1})
                 </div>
               ))}
               
-              {order.items.length > 3 && (
+              {order.items && order.items.length > 3 && (
                 <div className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-md mt-2">
                   +{order.items.length - 3} more
                 </div>

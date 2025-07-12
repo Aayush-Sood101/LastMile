@@ -81,8 +81,9 @@ export default function Orders() {
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase().trim();
       result = result.filter(order => 
-        order._id.toLowerCase().includes(term) ||
-        (order.items.some(item => 
+        (order._id && order._id.toLowerCase().includes(term)) ||
+        (order.items && Array.isArray(order.items) && order.items.some(item => 
+          item && item.product && item.product.name && 
           item.product.name.toLowerCase().includes(term)
         ))
       );
@@ -112,6 +113,9 @@ export default function Orders() {
   };
 
   const getStatusClass = (status) => {
+    // Use default status if none is provided
+    if (!status) status = 'pending';
+    
     switch (status) {
       case 'processing':
         return 'bg-blue-100 text-blue-800';
@@ -170,10 +174,10 @@ export default function Orders() {
             
             <div className="flex items-center sm:text-right">
               <div>
-                <div className="font-bold text-xl text-gray-900">${order.totalAmount.toFixed(2)}</div>
+                <div className="font-bold text-xl text-gray-900">${(order.totalAmount || 0).toFixed(2)}</div>
                 <div className="mt-1">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusClass(order.status)}`}>
-                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusClass(order.status || 'pending')}`}>
+                    {(order.status || 'pending').charAt(0).toUpperCase() + (order.status || 'pending').slice(1)}
                   </span>
                 </div>
               </div>
@@ -186,7 +190,7 @@ export default function Orders() {
           <div className="mt-4 pt-4 border-t border-gray-100">
             <div className="flex items-center justify-between text-sm text-gray-600">
               <div>
-                <span className="font-medium">{order.items.length}</span> {order.items.length === 1 ? 'item' : 'items'}
+                <span className="font-medium">{order.items?.length || 0}</span> {(order.items?.length || 0) === 1 ? 'item' : 'items'}
               </div>
               {order.isGroupOrder && (
                 <div className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
