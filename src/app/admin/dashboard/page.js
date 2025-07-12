@@ -441,6 +441,13 @@ export default function AdminDashboard() {
             >
               <FaStore /> <span>Products</span>
             </button>
+            
+            <a 
+              href="/admin/price-optimizer"
+              className="flex items-center space-x-3 w-full p-3 rounded-lg mb-2 text-left hover:bg-green-700"
+            >
+              <FaDollarSign /> <span>Price Optimizer</span>
+            </a>
           </nav>
         </div>
         
@@ -498,6 +505,13 @@ export default function AdminDashboard() {
             >
               <FaStore /> <span>Products</span>
             </button>
+            
+            <a 
+              href="/admin/price-optimizer"
+              className="flex items-center space-x-3 w-full p-3 rounded-lg"
+            >
+              <FaDollarSign /> <span>Price Optimizer</span>
+            </a>
             
             <button 
               className="flex items-center space-x-3 w-full p-3 rounded-lg text-green-200"
