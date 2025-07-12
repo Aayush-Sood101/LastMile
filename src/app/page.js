@@ -60,7 +60,7 @@ export default function Home() {
               </div>
               <p className="text-sm text-gray-600 text-center mt-4">
                 Admin access for Walmart staff only.<br />
-                <span className="text-xs">(Use walmart@admin.com / password123)</span>
+                
               </p>
             </div>
           )}
