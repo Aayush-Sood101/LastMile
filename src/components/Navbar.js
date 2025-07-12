@@ -16,6 +16,7 @@ import {
   FaBars,
   FaTimes 
 } from 'react-icons/fa';
+import NotificationBell from './NotificationBell';
 
 export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -126,6 +127,10 @@ export default function Navbar() {
                   </motion.div>
                 </Link>
                 
+                <div className="ml-2">
+                  <NotificationBell userId={user?.id} />
+                </div>
+                
                 <button
                   onClick={handleLogout}
                   className="ml-2 p-3 rounded-full text-gray-500 hover:bg-gray-100 transition-colors duration-200"
@@ -189,6 +194,13 @@ export default function Navbar() {
                   )}
                 </div>
               </MobileNavLink>
+              
+              <div className="px-4 py-3">
+                <div className="flex items-center">
+                  <span className="mr-3">Notifications</span>
+                  <NotificationBell userId={user?.id} isMobile={true} />
+                </div>
+              </div>
               <div 
                 className="block px-4 py-3 rounded-md text-base font-medium text-red-600 hover:bg-red-50 cursor-pointer"
                 onClick={handleLogout}

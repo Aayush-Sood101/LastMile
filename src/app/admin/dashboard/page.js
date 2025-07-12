@@ -66,6 +66,17 @@ export default function AdminDashboard() {
       return;
     }
 
+    // Check URL params for tab selection and specific actions
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      
+      // If a tab is specified in the URL, set it as active
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
+    }
+
     // Verify token validity with the server
     const verifyToken = async () => {
       try {
@@ -107,6 +118,13 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem('token');
       
+      // Check URL for specific community ID when on communities tab
+      let highlightCommunityId = null;
+      if (typeof window !== 'undefined' && tab === 'communities') {
+        const urlParams = new URLSearchParams(window.location.search);
+        highlightCommunityId = urlParams.get('communityId');
+      }
+      
       switch (tab) {
         case 'dashboard':
           // Fetch both dashboard data and user stats
@@ -138,7 +156,22 @@ export default function AdminDashboard() {
             'http://localhost:5000/api/admin/community-requests',
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          setCommunityRequests(communitiesResponse.data);
+          
+          // If a specific community ID is provided in URL, highlight it
+          if (highlightCommunityId) {
+            const allRequests = communitiesResponse.data;
+            const targetCommunity = allRequests.find(c => c._id === highlightCommunityId);
+            
+            if (targetCommunity) {
+              // Put the highlighted community at the top of the list
+              const filteredRequests = allRequests.filter(c => c._id !== highlightCommunityId);
+              setCommunityRequests([targetCommunity, ...filteredRequests]);
+            } else {
+              setCommunityRequests(allRequests);
+            }
+          } else {
+            setCommunityRequests(communitiesResponse.data);
+          }
           break;
           
         case 'orders':
@@ -179,6 +212,7 @@ export default function AdminDashboard() {
 
   const handleApproveCommunity = async (communityId) => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('token');
       await axios.put(
         `http://localhost:5000/api/communities/${communityId}/approve`,
@@ -186,11 +220,41 @@ export default function AdminDashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
+      showToast('Community approved successfully', 'success');
+      
       // Refresh community requests data
       loadTabData('communities');
     } catch (error) {
       console.error('Error approving community:', error);
-      alert('Failed to approve community');
+      showToast('Failed to approve community', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleRejectCommunity = async (communityId) => {
+    try {
+      // Ask for rejection reason
+      const reason = prompt('Please provide a reason for rejecting this community:');
+      if (reason === null) return; // User cancelled
+      
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `http://localhost:5000/api/communities/${communityId}/reject`,
+        { reason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      showToast('Community rejected successfully', 'success');
+      
+      // Refresh community requests data
+      loadTabData('communities');
+    } catch (error) {
+      console.error('Error rejecting community:', error);
+      showToast('Failed to reject community', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -785,44 +849,56 @@ export default function AdminDashboard() {
                     </div>
                     
                     <div className="divide-y">
-                      {communityRequests.map(request => (
-                        <div key={request._id} className="p-6">
-                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                              <h4 className="text-lg font-semibold">{request.name}</h4>
-                              <p className="text-gray-600 text-sm mb-2">
-                                {typeof request.location === 'object' 
-                                  ? `${request.location.address || ''} ${request.location.city || ''} ${request.location.state || ''} ${request.location.zipCode || ''}`.trim()
-                                  : request.location}
-                              </p>
-                              <p className="text-gray-700">{request.description}</p>
+                      {communityRequests.map(request => {
+                        // Check if this is the highlighted community from URL
+                        const isHighlighted = typeof window !== 'undefined' && 
+                          new URLSearchParams(window.location.search).get('communityId') === request._id;
+                        
+                        return (
+                          <div key={request._id} className={`p-6 ${isHighlighted ? 'bg-yellow-50 border-l-4 border-yellow-500' : ''}`}>
+                            {isHighlighted && (
+                              <div className="mb-3 text-yellow-700 bg-yellow-100 px-3 py-1 rounded inline-block text-sm">
+                                New request from notification
+                              </div>
+                            )}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                              <div>
+                                <h4 className="text-lg font-semibold">{request.name}</h4>
+                                <p className="text-gray-600 text-sm mb-2">
+                                  {typeof request.location === 'object' 
+                                    ? `${request.location.address || ''} ${request.location.city || ''} ${request.location.state || ''} ${request.location.zipCode || ''}`.trim()
+                                    : request.location}
+                                </p>
+                                <p className="text-gray-700">{request.description}</p>
+                                
+                                {request.createdBy && (
+                                  <div className="mt-2">
+                                    <span className="text-sm text-gray-500">
+                                      Requested by: {request.createdBy.name} ({request.createdBy.email})
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                               
-                              {request.createdBy && (
-                                <div className="mt-2">
-                                  <span className="text-sm text-gray-500">
-                                    Requested by: {request.createdBy.name} ({request.createdBy.email})
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="flex space-x-3">
-                              <button
-                                className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md"
-                                onClick={() => handleApproveCommunity(request._id)}
-                              >
-                                <FaCheck className="mr-2" /> Approve
-                              </button>
-                              
-                              <button
-                                className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
-                              >
-                                <FaTimes className="mr-2" /> Reject
-                              </button>
+                              <div className="flex space-x-3">
+                                <button
+                                  className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md"
+                                  onClick={() => handleApproveCommunity(request._id)}
+                                >
+                                  <FaCheck className="mr-2" /> Approve
+                                </button>
+                                
+                                <button
+                                  className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+                                  onClick={() => handleRejectCommunity(request._id)}
+                                >
+                                  <FaTimes className="mr-2" /> Reject
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import React from 'react';
 import Navbar from '@/components/Navbar';
-import { FaUsers, FaUserPlus, FaUserMinus, FaCheckCircle, FaTimesCircle, FaLeaf, FaTruck, FaShoppingBag } from 'react-icons/fa';
+import { FaUsers, FaUserPlus, FaUserMinus, FaCheckCircle, FaTimesCircle, FaLeaf, FaTruck, FaShoppingBag, FaCrown } from 'react-icons/fa';
 
 export default function CommunityDetail({ params }) {
   const router = useRouter();
@@ -20,7 +20,95 @@ export default function CommunityDetail({ params }) {
   const [error, setError] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [requestProcessing, setRequestProcessing] = useState(false);
+  const [statusMessage, setStatusMessage] = useState({ type: '', message: '' });
 
+  // State to track URL search params
+  const [urlSearch, setUrlSearch] = useState('');
+  
+  // Set initial tab based on URL parameter - do this before the first render
+  useEffect(() => {
+    // Check if there's a tab parameter in the URL
+    if (typeof window !== 'undefined') {
+      // Update the URL search state
+      setUrlSearch(window.location.search);
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      console.log('URL Parameters:', window.location.search);
+      console.log('Tab parameter:', tabParam);
+      
+      // If coming from notification and tab is join-requests
+      if (tabParam === 'join-requests' && id) {
+        console.log('Tab parameter triggered immediate data fetch');
+        
+        // First fetch community data to determine if user is admin
+        const checkAdminStatus = async () => {
+          try {
+            const token = localStorage.getItem('token');
+            const user = JSON.parse(localStorage.getItem('user'));
+            
+            if (!token || !user) {
+              console.log("No user token found, redirecting to login");
+              router.push('/auth/login');
+              return;
+            }
+            
+            // Fetch community details first to determine admin status
+            await fetchCommunityData();
+            
+            // After fetch completes, isAdmin state should be updated
+            // Only show requests tab if user is admin
+            if (isAdmin) {
+              console.log('User confirmed as admin, setting tab to requests');
+              setActiveTab('requests');
+            } else {
+              console.log('User is not admin, showing overview instead');
+              setActiveTab('overview');
+            }
+          } catch (error) {
+            console.error("Error checking admin status:", error);
+          }
+        };
+        
+        checkAdminStatus();
+      }
+    }
+  }, [id, router]);
+
+  // Listen for URL changes after component is mounted
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Function to handle URL changes
+      const handleUrlChange = () => {
+        setUrlSearch(window.location.search);
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        
+        if (tabParam === 'join-requests') {
+          console.log('URL changed to join-requests tab');
+          
+          // Only set active tab to requests if user is admin
+          if (isAdmin) {
+            console.log('User is admin, can show join requests tab');
+            setActiveTab('requests');
+          } else {
+            console.log('User is not admin, cannot show join requests tab');
+            setActiveTab('overview');
+          }
+        }
+      };
+      
+      // Add event listener for popstate (browser back/forward)
+      window.addEventListener('popstate', handleUrlChange);
+      
+      // Clean up
+      return () => {
+        window.removeEventListener('popstate', handleUrlChange);
+      };
+    }
+  }, [isAdmin]);
+  
   useEffect(() => {
     // Check if user is logged in
     const token = localStorage.getItem('token');
@@ -34,6 +122,42 @@ export default function CommunityDetail({ params }) {
     // Fetch community data
     fetchCommunityData();
     
+    // If this URL was accessed via a notification AND user is admin, scroll to the requests section
+    if ((activeTab === 'requests' || 
+        (typeof window !== 'undefined' && 
+         new URLSearchParams(urlSearch).get('tab') === 'join-requests')) && 
+        isAdmin) {
+      
+      console.log("Need to scroll to requests section - user is admin");
+      
+      // Try multiple times as the section might not be rendered immediately
+      const scrollAttempts = [100, 500, 1000, 2000]; // Try at different intervals
+      
+      scrollAttempts.forEach(delay => {
+        setTimeout(() => {
+          console.log(`Attempting to scroll to requests section (${delay}ms)`);
+          const requestsSection = document.getElementById('join-requests-section');
+          if (requestsSection) {
+            console.log('Found requests section, scrolling');
+            requestsSection.scrollIntoView({ behavior: 'smooth' });
+            
+            // Apply a temporary highlight
+            requestsSection.classList.add('ring-2', 'ring-green-500', 'transition-all', 'duration-500');
+            setTimeout(() => {
+              requestsSection.classList.remove('ring-2', 'ring-green-500');
+            }, 3000);
+          } else {
+            console.log('Requests section element not found - might need to fetch admin status first');
+          }
+        }, delay);
+      });
+    } else if (typeof window !== 'undefined' && 
+               new URLSearchParams(urlSearch).get('tab') === 'join-requests' && 
+               !isAdmin) {
+      console.log("User tried to access requests tab but is not admin - showing overview instead");
+      setActiveTab('overview');
+    }
+    
     // Set up periodic refresh to check for approval status changes
     const refreshInterval = setInterval(() => {
       fetchCommunityData();
@@ -41,7 +165,7 @@ export default function CommunityDetail({ params }) {
     
     // Clean up interval on component unmount
     return () => clearInterval(refreshInterval);
-  }, [id, router]);
+  }, [id, router, activeTab, urlSearch]);
 
   const fetchCommunityData = async () => {
     setLoading(true);
@@ -58,22 +182,55 @@ export default function CommunityDetail({ params }) {
       setCommunity(communityResponse.data);
       
       // Check if current user is the admin of this community
-      if (communityResponse.data.admin && communityResponse.data.admin._id === user._id) {
-        setIsAdmin(true);
-        
-        // If admin, fetch join requests
+      // Multiple ways to check admin status - both by comparing admin IDs and checking user flag
+      const adminId = communityResponse.data.admin && 
+          (typeof communityResponse.data.admin === 'object' 
+            ? communityResponse.data.admin._id 
+            : communityResponse.data.admin);
+            
+      const isUserAdmin = (adminId && adminId === user._id) || user.isCommunityAdmin;
+      
+      console.log("Admin ID from community:", adminId);
+      console.log("Current user ID:", user._id);
+      console.log("User isCommunityAdmin flag:", user.isCommunityAdmin);
+      console.log("User is admin of community:", isUserAdmin);
+      
+      setIsAdmin(isUserAdmin);
+      
+      // If admin, fetch join requests
+      if (isUserAdmin) {
+        console.log('User is admin of this community, fetching join requests');
         try {
           const requestsResponse = await axios.get(
             `http://localhost:5000/api/communities/${id}/membership-requests`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           
+          // Log the requests data for debugging
           console.log('Join requests response:', requestsResponse.data);
-          setJoinRequests(requestsResponse.data);
+          console.log('Join requests length:', requestsResponse.data?.length);
+          
+          // Make sure we're setting an array even if the response is empty
+          if (Array.isArray(requestsResponse.data)) {
+            console.log("Setting joinRequests state with data:", requestsResponse.data);
+            setJoinRequests(requestsResponse.data);
+            
+            // Force the active tab to requests if there are pending requests and coming from notification
+            if (requestsResponse.data.length > 0 && 
+                new URLSearchParams(window.location.search).get('tab') === 'join-requests') {
+              console.log("Setting active tab to requests due to pending requests from notification");
+              setActiveTab('requests');
+            }
+          } else {
+            console.warn('Membership requests response is not an array:', requestsResponse.data);
+            setJoinRequests([]);
+          }
         } catch (requestError) {
           console.error('Error fetching join requests:', requestError);
           setJoinRequests([]);
         }
+      } else {
+        console.log('User is not admin, not fetching join requests');
       }
       
       // Get members from the community object instead of a separate endpoint
@@ -126,22 +283,91 @@ export default function CommunityDetail({ params }) {
     }
   };
 
-  const handleJoinRequest = async (requestId, status) => {
+  const handleJoinRequest = async (requestId, status, userId) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(
-        `http://localhost:5000/api/communities/${id}/requests/${requestId}`,
-        { status },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      if (!token) {
+        throw new Error('No authentication token found. Please login again.');
+      }
+      
+      console.log("All join requests in state:", joinRequests);
+      
+      // Get the request details before updating
+      const request = joinRequests.find(req => req._id === requestId);
+      console.log("Found request by ID:", request);
+      
+      if (!request) {
+        console.error('Request not found:', requestId);
+        throw new Error('Join request not found. Please refresh the page and try again.');
+      }
+      
+      // Make sure we have a valid user ID
+      const targetUserId = userId || (request.user && request.user._id);
+      
+      if (!targetUserId) {
+        console.error('User ID is missing from request:', request);
+        throw new Error('User ID not found in the request. Please refresh and try again.');
+      }
+      
+      console.log('Processing request:', requestId, 'with status:', status, 'for user:', targetUserId);
+      
+      // Use the membership-requests endpoint with the user ID
+      try {
+        const endpoint = `http://localhost:5000/api/communities/${id}/membership-requests/${targetUserId}`;
+        console.log(`Sending request to: ${endpoint}`);
+        
+        const response = await axios.put(
+          endpoint,
+          { status },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        console.log('Request update response:', response.data);
+        
+        // Update the local state to remove the processed request
+        setJoinRequests(prev => prev.filter(req => req._id !== requestId));
+        
+        return response.data;
+      } catch (error) {
+        console.error('Error updating request status:', error.response?.data || error.message);
+        throw new Error(`Failed to update request status: ${error.response?.data?.message || error.message}`);
+      }
+      
+      // Create a notification for the user
+      try {
+        console.log('Creating notification for user:', request.user._id);
+        const notificationResponse = await axios.post(
+          'http://localhost:5000/api/notifications',
+          {
+            recipient: request.user._id,
+            type: status === 'approved' ? 'request_approved' : 'request_rejected',
+            title: status === 'approved' ? 'Join Request Approved' : 'Join Request Rejected',
+            message: status === 'approved' 
+              ? `Your request to join ${community.name} has been approved. You are now a member.`
+              : `Your request to join ${community.name} has been rejected.`,
+            relatedId: community._id,
+            onModel: 'Community'
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        console.log('Notification created:', notificationResponse.data);
+      } catch (notifyError) {
+        console.error('Error creating notification:', notifyError.response?.data || notifyError.message);
+      }
       
       // Refresh join requests
-      const requestsResponse = await axios.get(
-        `http://localhost:5000/api/communities/${id}/membership-requests`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      setJoinRequests(requestsResponse.data);
+      try {
+        const requestsResponse = await axios.get(
+          `http://localhost:5000/api/communities/${id}/membership-requests`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        console.log('Updated join requests:', requestsResponse.data);
+        setJoinRequests(requestsResponse.data);
+      } catch (error) {
+        console.error('Error refreshing join requests:', error);
+      }
       
       // If approved, refresh community data to get updated members list
       if (status === 'approved') {
@@ -181,7 +407,7 @@ export default function CommunityDetail({ params }) {
       }
     } catch (error) {
       console.error('Error handling join request:', error);
-      alert('Failed to process join request');
+      throw error; // Propagate the error so it can be handled by the button click handler
     }
   };
 
@@ -291,15 +517,42 @@ export default function CommunityDetail({ params }) {
                 onClick={() => setActiveTab('orders')}
               >
                 Orders
-              </button>
-              {isAdmin && (
+              </button>                {isAdmin && (
                 <button
                   className={`px-4 py-2 font-medium ${
                     activeTab === 'requests' ? 'text-green-600 border-b-2 border-green-600' : 'text-gray-600'
                   }`}
-                  onClick={() => setActiveTab('requests')}
+                  onClick={() => {
+                    console.log("Join Requests tab clicked, setting active tab to 'requests'");
+                    setActiveTab('requests');
+                    
+                    // Update URL without refreshing page to reflect current tab
+                    if (typeof window !== 'undefined') {
+                      const url = new URL(window.location);
+                      url.searchParams.set('tab', 'join-requests');
+                      window.history.pushState({}, '', url);
+                      // Update our URL search state
+                      setUrlSearch(url.search);
+                      console.log("Updated URL with tab parameter:", url.toString());
+                    }
+                    
+                    // Scroll to the requests section
+                    setTimeout(() => {
+                      const requestsSection = document.getElementById('join-requests-section');
+                      if (requestsSection) {
+                        console.log("Found requests section, scrolling to it");
+                        requestsSection.scrollIntoView({ behavior: 'smooth' });
+                      } else {
+                        console.log("Could not find join-requests-section element");
+                      }
+                    }, 100);
+                  }}
                 >
-                  Join Requests {joinRequests.length > 0 && `(${joinRequests.length})`}
+                  Join Requests {joinRequests.length > 0 && (
+                    <span className="bg-red-500 text-white rounded-full ml-2 px-2 py-0.5 text-xs">
+                      {joinRequests.length}
+                    </span>
+                  )}
                 </button>
               )}
             </div>
@@ -476,22 +729,53 @@ export default function CommunityDetail({ params }) {
             )}
             
             {activeTab === 'requests' && isAdmin && (
-              <div className="bg-white rounded-xl shadow-sm p-6">
+              <div id="join-requests-section" className={`bg-white rounded-xl shadow-sm p-6 ${
+                new URLSearchParams(urlSearch).get('tab') === 'join-requests' 
+                  ? 'ring-2 ring-green-500 transition-all duration-500' 
+                  : ''
+              }`}>
                 <h2 className="text-xl font-semibold mb-4">Pending Join Requests</h2>
                 
-                {joinRequests.length > 0 ? (
+                {/* Status message for request processing */}
+                {statusMessage.message && (
+                  <div className={`mb-4 p-4 rounded-md flex items-center ${
+                    statusMessage.type === 'success' 
+                      ? 'bg-green-100 text-green-800 border border-green-300' 
+                      : statusMessage.type === 'error'
+                      ? 'bg-red-100 text-red-800 border border-red-300'
+                      : 'bg-blue-100 text-blue-800 border border-blue-300'
+                  }`}>
+                    {statusMessage.type === 'success' && (
+                      <FaCheckCircle className="mr-2 text-green-500" />
+                    )}
+                    {statusMessage.type === 'error' && (
+                      <FaTimesCircle className="mr-2 text-red-500" />
+                    )}
+                    {statusMessage.type === 'processing' && (
+                      <div className="mr-2 w-4 h-4 border-2 border-blue-500 border-t-blue-200 rounded-full animate-spin"></div>
+                    )}
+                    {statusMessage.message}
+                  </div>
+                )}
+                
+                {loading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+                  </div>
+                ) : joinRequests && joinRequests.length > 0 ? (
                   <div className="space-y-6">
+                    {console.log("Rendering join requests:", joinRequests)}
                     {joinRequests.map(request => (
                       <div key={request._id} className="border rounded-lg p-4">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                           <div>
                             <div className="flex items-center">
                               <div className="w-10 h-10 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center mr-3">
-                                {request.user.name.charAt(0).toUpperCase()}
+                                {request.user && request.user.name ? request.user.name.charAt(0).toUpperCase() : '?'}
                               </div>
                               <div>
-                                <h3 className="font-medium">{request.user.name}</h3>
-                                <p className="text-sm text-gray-600">{request.user.email}</p>
+                                <h3 className="font-medium">{request.user && request.user.name ? request.user.name : 'Unknown User'}</h3>
+                                <p className="text-sm text-gray-600">{request.user && request.user.email ? request.user.email : 'No email available'}</p>
                               </div>
                             </div>
                             
@@ -509,14 +793,81 @@ export default function CommunityDetail({ params }) {
                           <div className="flex space-x-3">
                             <button
                               className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md"
-                              onClick={() => handleJoinRequest(request._id, 'approved')}
+                              disabled={requestProcessing}
+                              onClick={async () => {
+                                try {
+                                  // Validate required data before proceeding
+                                  if (!request.user || !request.user._id) {
+                                    throw new Error('User information is missing. Please refresh the page.');
+                                  }
+                                  
+                                  setRequestProcessing(true);
+                                  setStatusMessage({ type: 'processing', message: 'Processing request...' });
+                                  
+                                  console.log(`Approving request for user: ${request.user._id}`);
+                                  await handleJoinRequest(request._id, 'approved', request.user._id);
+                                  
+                                  setStatusMessage({ 
+                                    type: 'success', 
+                                    message: `${request.user.name || 'User'}'s request has been approved` 
+                                  });
+                                  
+                                  // Refresh the join requests list
+                                  fetchCommunityData();
+                                  
+                                  setTimeout(() => setStatusMessage({ type: '', message: '' }), 3000);
+                                } catch (error) {
+                                  console.error('Error approving request:', error);
+                                  setStatusMessage({ 
+                                    type: 'error', 
+                                    message: `Error: ${error.message}` 
+                                  });
+                                  setTimeout(() => setStatusMessage({ type: '', message: '' }), 5000);
+                                } finally {
+                                  setRequestProcessing(false);
+                                }
+                              }}
                             >
-                              <FaCheckCircle className="mr-2" /> Approve
+                              <FaCheckCircle className="mr-2" /> 
+                              {requestProcessing ? 'Processing...' : 'Approve'}
                             </button>
                             
                             <button
                               className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
-                              onClick={() => handleJoinRequest(request._id, 'rejected')}
+                              disabled={requestProcessing}
+                              onClick={async () => {
+                                try {
+                                  // Validate required data before proceeding
+                                  if (!request.user || !request.user._id) {
+                                    throw new Error('User information is missing. Please refresh the page.');
+                                  }
+                                  
+                                  setRequestProcessing(true);
+                                  setStatusMessage({ type: 'processing', message: 'Processing request...' });
+                                  
+                                  console.log(`Rejecting request for user: ${request.user._id}`);
+                                  await handleJoinRequest(request._id, 'rejected', request.user._id);
+                                  
+                                  setStatusMessage({ 
+                                    type: 'success', 
+                                    message: `${request.user.name || 'User'}'s request has been rejected` 
+                                  });
+                                  
+                                  // Refresh the join requests list
+                                  fetchCommunityData();
+                                  
+                                  setTimeout(() => setStatusMessage({ type: '', message: '' }), 3000);
+                                } catch (error) {
+                                  console.error('Error rejecting request:', error);
+                                  setStatusMessage({ 
+                                    type: 'error', 
+                                    message: `Error: ${error.message}` 
+                                  });
+                                  setTimeout(() => setStatusMessage({ type: '', message: '' }), 5000);
+                                } finally {
+                                  setRequestProcessing(false);
+                                }
+                              }}
                             >
                               <FaTimesCircle className="mr-2" /> Reject
                             </button>
@@ -526,7 +877,15 @@ export default function CommunityDetail({ params }) {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-600">No pending join requests</p>
+                  <div>
+                    <p className="text-gray-600 mb-4">No pending join requests</p>
+                    <button 
+                      onClick={() => fetchCommunityData()}
+                      className="text-sm text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Refresh join requests
+                    </button>
+                  </div>
                 )}
               </div>
             )}
