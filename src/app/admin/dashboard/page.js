@@ -39,6 +39,23 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // Animation variants for page elements
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { 
+        when: "beforeChildren",
+        staggerChildren: 0.1
+      }
+    }
+  };
+  
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { y: 0, opacity: 1, transition: { duration: 0.4 } }
+  };
+  
   // Product form state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -470,169 +487,295 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <div className="w-64 bg-green-800 text-white h-screen sticky top-0 hidden md:block">
+      <div className="w-72 bg-white text-gray-700 h-screen sticky top-0 hidden md:flex md:flex-col shadow-lg">
         <div className="p-6">
-          <h2 className="text-2xl font-bold mb-1">Walmart Admin</h2>
-          <p className="text-green-200 text-sm mb-8">Bulk Order Dashboard</p>
+          <div className="mb-8">
+            <div className="bg-primary-600 text-white p-4 rounded-xl mb-3 inline-flex">
+              <FaStore className="h-6 w-6" />
+            </div>
+            <h2 className="text-2xl font-bold mb-1 text-gray-800">LastMile Admin</h2>
+            <p className="text-gray-500 text-sm">Sustainability Dashboard</p>
+          </div>
           
-          <nav>
+          <nav className="space-y-1">
             <button 
-              className={`flex items-center space-x-3 w-full p-3 rounded-lg mb-2 text-left ${activeTab === 'dashboard' ? 'bg-green-700' : 'hover:bg-green-700'}`}
+              className={`flex items-center space-x-3 w-full p-3.5 rounded-xl mb-1 text-left transition-all duration-200 ${
+                activeTab === 'dashboard' 
+                  ? 'bg-primary-50 text-primary-700 font-medium shadow-sm' 
+                  : 'hover:bg-gray-50'
+              }`}
               onClick={() => handleTabChange('dashboard')}
             >
-              <FaChartLine /> <span>Dashboard</span>
+              <div className={`p-2 rounded-lg ${activeTab === 'dashboard' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100'}`}>
+                <FaChartLine className="h-4 w-4" /> 
+              </div>
+              <span>Dashboard</span>
+              {activeTab === 'dashboard' && (
+                <div className="w-1 h-8 bg-primary-600 rounded-full ml-auto"></div>
+              )}
             </button>
             
             <button 
-              className={`flex items-center space-x-3 w-full p-3 rounded-lg mb-2 text-left ${activeTab === 'communities' ? 'bg-green-700' : 'hover:bg-green-700'}`}
+              className={`flex items-center space-x-3 w-full p-3.5 rounded-xl mb-1 text-left transition-all duration-200 ${
+                activeTab === 'communities' 
+                  ? 'bg-primary-50 text-primary-700 font-medium shadow-sm' 
+                  : 'hover:bg-gray-50'
+              }`}
               onClick={() => handleTabChange('communities')}
             >
-              <FaUsers /> <span>Communities</span>
+              <div className={`p-2 rounded-lg ${activeTab === 'communities' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100'}`}>
+                <FaUsers className="h-4 w-4" />
+              </div>
+              <span>Communities</span>
+              {activeTab === 'communities' && (
+                <div className="w-1 h-8 bg-primary-600 rounded-full ml-auto"></div>
+              )}
             </button>
             
             <button 
-              className={`flex items-center space-x-3 w-full p-3 rounded-lg mb-2 text-left ${activeTab === 'orders' ? 'bg-green-700' : 'hover:bg-green-700'}`}
+              className={`flex items-center space-x-3 w-full p-3.5 rounded-xl mb-1 text-left transition-all duration-200 ${
+                activeTab === 'orders' 
+                  ? 'bg-primary-50 text-primary-700 font-medium shadow-sm' 
+                  : 'hover:bg-gray-50'
+              }`}
               onClick={() => handleTabChange('orders')}
             >
-              <FaBoxes /> <span>Orders</span>
+              <div className={`p-2 rounded-lg ${activeTab === 'orders' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100'}`}>
+                <FaBoxes className="h-4 w-4" />
+              </div>
+              <span>Orders</span>
+              {activeTab === 'orders' && (
+                <div className="w-1 h-8 bg-primary-600 rounded-full ml-auto"></div>
+              )}
             </button>
             
             <button 
-              className={`flex items-center space-x-3 w-full p-3 rounded-lg mb-2 text-left ${activeTab === 'products' ? 'bg-green-700' : 'hover:bg-green-700'}`}
+              className={`flex items-center space-x-3 w-full p-3.5 rounded-xl mb-1 text-left transition-all duration-200 ${
+                activeTab === 'products' 
+                  ? 'bg-primary-50 text-primary-700 font-medium shadow-sm' 
+                  : 'hover:bg-gray-50'
+              }`}
               onClick={() => handleTabChange('products')}
             >
-              <FaStore /> <span>Products</span>
+              <div className={`p-2 rounded-lg ${activeTab === 'products' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100'}`}>
+                <FaStore className="h-4 w-4" />
+              </div>
+              <span>Products</span>
+              {activeTab === 'products' && (
+                <div className="w-1 h-8 bg-primary-600 rounded-full ml-auto"></div>
+              )}
             </button>
             
             <a 
               href="/admin/price-optimizer"
-              className="flex items-center space-x-3 w-full p-3 rounded-lg mb-2 text-left hover:bg-green-700"
+              className="flex items-center space-x-3 w-full p-3.5 rounded-xl mb-1 text-left hover:bg-gray-50 transition-all duration-200"
             >
-              <FaDollarSign /> <span>Price Optimizer</span>
+              <div className="p-2 rounded-lg bg-gray-100">
+                <FaDollarSign className="h-4 w-4" />
+              </div>
+              <span>Price Optimizer</span>
             </a>
           </nav>
         </div>
         
-        <div className="mt-auto p-4 border-t border-green-700">
+        <div className="mt-auto p-6 border-t border-gray-200">
           <button 
-            className="flex items-center space-x-2 text-green-200 hover:text-white w-full"
+            className="flex items-center space-x-3 w-full p-3 rounded-xl text-left text-gray-600 hover:bg-gray-50 transition-all duration-200"
             onClick={handleLogout}
           >
-            <FaSignOutAlt /> <span>Log Out</span>
+            <div className="p-2 bg-red-50 rounded-lg text-red-500">
+              <FaSignOutAlt className="h-4 w-4" />
+            </div>
+            <span>Log Out</span>
           </button>
         </div>
       </div>
 
       {/* Mobile header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 bg-green-800 text-white z-10">
+      <div className="md:hidden fixed top-0 left-0 right-0 bg-white shadow-md text-gray-800 z-10">
         <div className="flex items-center justify-between p-4">
-          <h2 className="text-xl font-bold">Walmart Admin</h2>
+          <div className="flex items-center">
+            <div className="bg-primary-600 text-white p-2 rounded-lg mr-2">
+              <FaStore className="h-5 w-5" />
+            </div>
+            <h2 className="text-xl font-bold">LastMile Admin</h2>
+          </div>
           
           <button 
-            className="bg-green-700 p-2 rounded"
+            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors duration-200"
             onClick={() => document.getElementById('mobileMenu').classList.toggle('hidden')}
           >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
         </div>
         
         <div id="mobileMenu" className="hidden">
-          <div className="p-4 space-y-3">
+          <div className="p-4 space-y-1 bg-white border-t border-gray-200 shadow-lg">
             <button 
-              className={`flex items-center space-x-3 w-full p-3 rounded-lg ${activeTab === 'dashboard' ? 'bg-green-700' : ''}`}
-              onClick={() => handleTabChange('dashboard')}
+              className={`flex items-center space-x-3 w-full p-3 rounded-xl ${
+                activeTab === 'dashboard' 
+                  ? 'bg-primary-50 text-primary-700' 
+                  : 'hover:bg-gray-50 text-gray-700'
+              }`}
+              onClick={() => {
+                handleTabChange('dashboard');
+                document.getElementById('mobileMenu').classList.add('hidden');
+              }}
             >
-              <FaChartLine /> <span>Dashboard</span>
+              <div className={`p-2 rounded-lg ${activeTab === 'dashboard' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100'}`}>
+                <FaChartLine className="h-4 w-4" />
+              </div>
+              <span>Dashboard</span>
             </button>
             
             <button 
-              className={`flex items-center space-x-3 w-full p-3 rounded-lg ${activeTab === 'communities' ? 'bg-green-700' : ''}`}
-              onClick={() => handleTabChange('communities')}
+              className={`flex items-center space-x-3 w-full p-3 rounded-xl ${
+                activeTab === 'communities' 
+                  ? 'bg-primary-50 text-primary-700' 
+                  : 'hover:bg-gray-50 text-gray-700'
+              }`}
+              onClick={() => {
+                handleTabChange('communities');
+                document.getElementById('mobileMenu').classList.add('hidden');
+              }}
             >
-              <FaUsers /> <span>Communities</span>
+              <div className={`p-2 rounded-lg ${activeTab === 'communities' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100'}`}>
+                <FaUsers className="h-4 w-4" />
+              </div>
+              <span>Communities</span>
             </button>
             
             <button 
-              className={`flex items-center space-x-3 w-full p-3 rounded-lg ${activeTab === 'orders' ? 'bg-green-700' : ''}`}
-              onClick={() => handleTabChange('orders')}
+              className={`flex items-center space-x-3 w-full p-3 rounded-xl ${
+                activeTab === 'orders' 
+                  ? 'bg-primary-50 text-primary-700' 
+                  : 'hover:bg-gray-50 text-gray-700'
+              }`}
+              onClick={() => {
+                handleTabChange('orders');
+                document.getElementById('mobileMenu').classList.add('hidden');
+              }}
             >
-              <FaBoxes /> <span>Orders</span>
+              <div className={`p-2 rounded-lg ${activeTab === 'orders' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100'}`}>
+                <FaBoxes className="h-4 w-4" />
+              </div>
+              <span>Orders</span>
             </button>
             
             <button 
-              className={`flex items-center space-x-3 w-full p-3 rounded-lg ${activeTab === 'products' ? 'bg-green-700' : ''}`}
-              onClick={() => handleTabChange('products')}
+              className={`flex items-center space-x-3 w-full p-3 rounded-xl ${
+                activeTab === 'products' 
+                  ? 'bg-primary-50 text-primary-700' 
+                  : 'hover:bg-gray-50 text-gray-700'
+              }`}
+              onClick={() => {
+                handleTabChange('products');
+                document.getElementById('mobileMenu').classList.add('hidden');
+              }}
             >
-              <FaStore /> <span>Products</span>
+              <div className={`p-2 rounded-lg ${activeTab === 'products' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100'}`}>
+                <FaStore className="h-4 w-4" />
+              </div>
+              <span>Products</span>
             </button>
             
             <a 
-              href="/admin/price-optimizer"
-              className="flex items-center space-x-3 w-full p-3 rounded-lg"
+              href="/admin/price-optimizer" 
+              className="flex items-center space-x-3 w-full p-3 rounded-xl hover:bg-gray-50 text-gray-700"
             >
-              <FaDollarSign /> <span>Price Optimizer</span>
+              <div className="p-2 rounded-lg bg-gray-100">
+                <FaDollarSign className="h-4 w-4" />
+              </div>
+              <span>Price Optimizer</span>
             </a>
             
             <button 
-              className="flex items-center space-x-3 w-full p-3 rounded-lg text-green-200"
+              className="flex items-center space-x-3 w-full p-3 rounded-xl text-red-600 hover:bg-red-50 mt-4"
               onClick={handleLogout}
             >
-              <FaSignOutAlt /> <span>Log Out</span>
+              <div className="p-2 bg-red-50 rounded-lg text-red-500">
+                <FaSignOutAlt className="h-4 w-4" />
+              </div>
+              <span>Log Out</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 md:ml-64 md:mt-0 mt-16 min-h-screen">
+      <div className="flex-1 md:ml-72 md:mt-0 mt-16 min-h-screen bg-gray-50 pb-12">
         {/* Toast Notification */}
         {toast.show && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`fixed top-4 right-4 z-50 py-3 px-4 rounded-lg shadow-lg ${
+          <div
+            className={`fixed top-4 right-4 z-50 py-3 px-6 rounded-lg shadow-lg ${
               toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'
-            } text-white`}
+            } text-white flex items-center space-x-2`}
           >
-            {toast.message}
-          </motion.div>
+            {toast.type === 'error' ? 
+              <FaTimes className="h-5 w-5" /> : 
+              <FaCheck className="h-5 w-5" />
+            }
+            <span>{toast.message}</span>
+          </div>
         )}
 
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+          <div className="flex flex-col justify-center items-center h-64 mt-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600 mb-4"></div>
+            <p className="text-primary-600 font-medium">Loading dashboard data...</p>
           </div>
         ) : error ? (
-          <div className="p-6">
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              {error}
+          <div className="p-8">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl flex items-start">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="font-medium">Error Loading Data</p>
+                <p className="mt-1 text-sm">{error}</p>
+              </div>
             </div>
           </div>
         ) : (
           <>
             {/* Dashboard Tab */}
             {activeTab === 'dashboard' && dashboardData && (
-              <div className="p-6">
-                <h1 className="text-3xl font-bold text-gray-800 mb-6">Walmart Admin Dashboard</h1>
+              <div className="p-8">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-800 mb-2">Admin Dashboard</h1>
+                    <p className="text-gray-600">Monitor and manage your LastMile operations</p>
+                  </div>
+                  
+                  <div className="mt-4 md:mt-0 flex items-center bg-white rounded-lg p-2 shadow-sm border border-gray-200">
+                    <div className="text-xs text-gray-500 px-2">Last updated:</div>
+                    <div className="bg-primary-50 text-primary-700 px-2 py-1 rounded text-sm font-medium">
+                      {new Date().toLocaleString()}
+                    </div>
+                  </div>
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                   {/* KPI Cards */}
-                  <div className="bg-white rounded-xl shadow-sm p-6">
+                  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow duration-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-gray-500 text-sm">Total Users</p>
-                        <h3 className="text-3xl font-bold">{dashboardData.userStats?.total || 'N/A'}</h3>
+                        <p className="text-gray-500 text-sm font-medium">Total Users</p>
+                        <h3 className="text-3xl font-bold mt-1 text-gray-800">{dashboardData.userStats?.total || 'N/A'}</h3>
                       </div>
-                      <div className="bg-blue-100 p-3 rounded-full text-blue-600">
-                        <FaUsers className="text-xl" />
+                      <div className="bg-blue-100 p-3 rounded-xl text-blue-600">
+                        <FaUsers className="h-6 w-6" />
                       </div>
                     </div>
-                    <div className="mt-4 text-sm text-gray-600">
-                      <span className="text-green-600">+{dashboardData.userStats?.newThisMonth || 0}</span> new this month
+                    <div className="mt-4 text-sm flex items-center">
+                      <div className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">
+                        +{dashboardData.userStats?.newThisMonth || 0} new
+                      </div>
+                      <span className="ml-2 text-gray-500">this month</span>
                     </div>
                   </div>
                   
@@ -1149,9 +1292,7 @@ export default function AdminDashboard() {
                 {/* Add/Edit Product Modal */}
                 {isModalOpen && (
                   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
+                    <div
                       className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
                     >
                       <div className="p-6 border-b border-gray-100">
@@ -1306,7 +1447,7 @@ export default function AdminDashboard() {
                           </Button>
                         </div>
                       </form>
-                    </motion.div>
+                    </div>
                   </div>
                 )}
               </div>

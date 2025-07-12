@@ -8,6 +8,11 @@
   --background-start-rgb: 245, 245, 245;
   --background-end-rgb: 255, 255, 255;
   --primary-color: 22, 163, 74; /* Green-600 */
+  --primary-light: 34, 197, 94; /* Green-500 */
+  --primary-dark: 21, 128, 61; /* Green-700 */
+  --accent-color: 249, 115, 22; /* Orange-500 */
+  --accent-light: 251, 146, 60; /* Orange-400 */
+  --accent-dark: 234, 88, 12; /* Orange-600 */
 }
 
 body {
@@ -18,6 +23,11 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background: rgba(22, 163, 74, 0.2);
 }
 
 /* Typography */
@@ -46,42 +56,98 @@ h3 {
 .btn-primary {
   background-color: #16a34a;
   color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 300ms;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+  display: inline-block;
+  text-align: center;
+  position: relative;
+  border: 1px solid transparent;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .btn-primary:hover {
   background-color: #15803d;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
 .btn-secondary {
-  background-color: #e5e7eb;
+  background-color: #f3f4f6;
   color: #1f2937;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 300ms;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+  display: inline-block;
+  text-align: center;
+  position: relative;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .btn-secondary:hover {
-  background-color: #d1d5db;
+  background-color: #e5e7eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: #16a34a;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+  display: inline-block;
+  text-align: center;
+  position: relative;
+  border: 1px solid #16a34a;
+}
+
+.btn-outline:hover {
+  background-color: rgba(22, 163, 74, 0.05);
+  transform: translateY(-1px);
 }
 
 .input-field {
   width: 100%;
-  padding: 0.5rem;
+  padding: 0.625rem 0.75rem;
   border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  background-color: #fff;
+}
+
+.input-field:hover {
+  border-color: #9ca3af;
 }
 
 .input-field:focus {
   outline: none;
   border-color: #16a34a;
-  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+  --ring-offset: 2px;
+}
+
+.input-label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #4b5563;
 }
 
 .card {
@@ -89,4 +155,39 @@ h3 {
   padding: 1.5rem;
   border-radius: 0.75rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-success {
+  background-color: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+}
+
+.badge-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+
+.badge-error {
+  background-color: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.badge-info {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
 }

@@ -87,7 +87,7 @@ export default function Navbar() {
                 <FaLeaf className="h-5 w-5" />
               </div>
               <span className="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-emerald-800">
-                BulkBuddy
+                LastMile
               </span>
             </Link>
           </div>

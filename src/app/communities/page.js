@@ -307,15 +307,20 @@ export default function Communities() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Communities</h1>
-            <p className="text-gray-600">Join or create a community to coordinate bulk orders</p>
+            <h1 className="text-3xl font-bold text-gray-800 flex items-center">
+              <span className="bg-primary-50 p-2 rounded-full mr-3 text-primary-600">
+                <FaUsers className="h-6 w-6" />
+              </span>
+              Communities
+            </h1>
+            <p className="text-gray-600 mt-2">Join or create a community to coordinate bulk orders and reduce environmental impact</p>
           </div>
           
           <button
-            className="btn-primary mt-4 md:mt-0 flex items-center"
+            className="mt-4 md:mt-0 px-5 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors duration-200 inline-flex items-center shadow-sm"
             onClick={() => setShowCreateModal(true)}
           >
             <FaUsers className="mr-2" /> Create Community
@@ -323,65 +328,94 @@ export default function Communities() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600"></div>
+          <div className="flex flex-col justify-center items-center h-64 bg-white rounded-xl shadow-sm p-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600 mb-4"></div>
+            <p className="text-gray-500 font-medium">Loading communities...</p>
           </div>
         ) : error ? (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
+          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl shadow-sm mb-8">
+            <div className="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p>{error}</p>
+            </div>
           </div>
         ) : communities.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {communities.map(community => (
-              <div key={community._id} className="bg-white rounded-xl shadow-sm overflow-hidden">
+              <div 
+                key={community._id} 
+                className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-md transition-all duration-200 group"
+              >
+                <div className="h-24 bg-gradient-to-r from-blue-500 to-primary-500 relative">
+                  <div className="absolute inset-0 bg-black/10"></div>
+                  {community.isApproved ? (
+                    <div className="absolute top-4 right-4 bg-green-100 text-green-800 px-2.5 py-1 rounded-full text-xs font-medium flex items-center">
+                      <FaCheckCircle className="mr-1" /> Active
+                    </div>
+                  ) : (
+                    <div className="absolute top-4 right-4 bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-full text-xs font-medium flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Pending Approval
+                    </div>
+                  )}
+                </div>
+                
                 <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <h3 className="text-xl font-semibold">{community.name}</h3>
-                    {community.isApproved ? (
-                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Active</span>
-                    ) : (
-                      <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Pending Approval</span>
-                    )}
-                  </div>
+                  <h3 className="text-xl font-semibold mb-3 group-hover:text-primary-600 transition-colors duration-200">
+                    {community.name}
+                  </h3>
                   
                   <div className="flex items-start mb-4">
-                    <FaMapMarkerAlt className="text-gray-400 mt-1 mr-2" />
-                    <p className="text-gray-600">
+                    <FaMapMarkerAlt className="text-primary-500 mt-1 mr-2 flex-shrink-0" />
+                    <p className="text-gray-600 text-sm">
                       {typeof community.location === 'object' 
-                        ? `${community.location.address || ''} ${community.location.city || ''} ${community.location.state || ''} ${community.location.zipCode || ''}`.trim()
+                        ? `${community.location.city || ''}, ${community.location.state || ''}`.trim()
                         : community.location}
                     </p>
                   </div>
                   
-                  <p className="text-gray-700 mb-6">
-                    {community.description.length > 150 
-                      ? `${community.description.substring(0, 150)}...` 
-                      : community.description}
-                  </p>
+                  <div className="bg-gray-50 rounded-lg p-3 mb-5 min-h-[80px]">
+                    <p className="text-gray-700 text-sm line-clamp-3">
+                      {community.description}
+                    </p>
+                  </div>
                   
-                  <div className="flex items-center text-gray-500 text-sm mb-6">
+                  <div className="flex items-center justify-between text-gray-500 text-sm mb-5">
                     <div className="flex items-center">
-                      <FaUsers className="mr-1" />
+                      <div className="flex -space-x-2 overflow-hidden mr-2">
+                        {[...Array(Math.min(3, community.memberCount || 1))].map((_, index) => (
+                          <div key={index} className="inline-block h-6 w-6 rounded-full bg-primary-100 text-primary-600 text-xs flex items-center justify-center ring-2 ring-white">
+                            {String.fromCharCode(65 + index)}
+                          </div>
+                        ))}
+                      </div>
                       <span>{community.memberCount || 1} members</span>
                     </div>
+                    
                     {community.createdBy && (
-                      <div className="flex items-center ml-4">
-                        <FaCrown className="mr-1 text-yellow-500" />
-                        <span>Admin: {community.createdBy.name}</span>
+                      <div className="flex items-center">
+                        <FaCrown className="mr-1 text-amber-500" />
+                        <span className="truncate max-w-[100px]" title={community.createdBy.name}>
+                          {community.createdBy.name}
+                        </span>
                       </div>
                     )}
                   </div>
                   
                   {isMemberOf(community._id) ? (
                     <button
-                      className="w-full btn-secondary flex justify-center items-center"
+                      className="w-full py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-lg transition-colors duration-200 flex justify-center items-center"
                       onClick={() => router.push(`/communities/${community._id}`)}
                     >
-                      <FaCheckCircle className="mr-2" /> Member - View Details
+                      <FaCheckCircle className="mr-2 text-green-600" /> View Community
                     </button>
                   ) : (
                     <button
-                      className="w-full btn-primary flex justify-center items-center"
+                      className="w-full py-3 px-4 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors duration-200 flex justify-center items-center disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => openJoinModal(community)}
                       disabled={!community.isApproved}
                     >
@@ -394,13 +428,16 @@ export default function Communities() {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <h3 className="text-xl font-semibold mb-2">No communities found</h3>
-            <p className="text-gray-600 mb-6">
-              Be the first to create a community in your neighborhood!
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center border border-gray-100">
+            <div className="inline-flex h-20 w-20 items-center justify-center mb-6 bg-blue-50 rounded-full">
+              <FaUsers className="h-10 w-10 text-blue-300" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2 text-gray-800">No communities found</h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              Be the first to create a community in your neighborhood and start organizing bulk orders!
             </p>
             <button
-              className="btn-primary inline-flex items-center"
+              className="px-6 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors duration-200 inline-flex items-center shadow-sm"
               onClick={() => setShowCreateModal(true)}
             >
               <FaUsers className="mr-2" /> Create Community
@@ -411,29 +448,53 @@ export default function Communities() {
 
       {/* Create Community Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">Create New Community</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto shadow-xl border border-gray-200">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <div className="bg-primary-100 text-primary-600 p-2 rounded-lg mr-3">
+                  <FaUsers className="h-6 w-6" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800">Create New Community</h2>
+              </div>
+              <button 
+                onClick={() => setShowCreateModal(false)} 
+                className="text-gray-500 hover:text-gray-700 focus:outline-none"
+                aria-label="Close modal"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             
             <form onSubmit={handleCreateCommunity}>
-              <div className="mb-4">
+              <div className="mb-5">
                 <label htmlFor="name" className="block text-gray-700 font-medium mb-2">
                   Community Name
                 </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={createFormData.name}
-                  onChange={handleCreateInputChange}
-                  required
-                  className="input-field"
-                  placeholder="e.g. Green Acres Apartments"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={createFormData.name}
+                    onChange={handleCreateInputChange}
+                    required
+                    className="w-full px-4 py-3 pl-10 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50 transition-all duration-200"
+                    placeholder="e.g. Green Acres Apartments"
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                </div>
               </div>
               
-              <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-2">
+              <div className="mb-5">
+                <label className="block text-gray-700 font-medium mb-2 flex items-center">
+                  <FaMapMarkerAlt className="mr-2 text-primary-600" />
                   Location
                 </label>
                 <div className="space-y-3">
@@ -447,12 +508,12 @@ export default function Communities() {
                       name="address"
                       value={createFormData.location.address}
                       onChange={handleCreateInputChange}
-                      className="input-field"
+                      className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50 transition-all duration-200"
                       placeholder="e.g. 123 Main Street"
                     />
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label htmlFor="city" className="block text-gray-600 text-sm mb-1">
                         City
@@ -464,7 +525,7 @@ export default function Communities() {
                         value={createFormData.location.city}
                         onChange={handleCreateInputChange}
                         required
-                        className="input-field"
+                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50 transition-all duration-200"
                         placeholder="e.g. Springfield"
                       />
                     </div>
@@ -480,7 +541,7 @@ export default function Communities() {
                         value={createFormData.location.state}
                         onChange={handleCreateInputChange}
                         required
-                        className="input-field"
+                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50 transition-all duration-200"
                         placeholder="e.g. IL"
                       />
                     </div>
@@ -496,7 +557,7 @@ export default function Communities() {
                         value={createFormData.location.zipCode}
                         onChange={handleCreateInputChange}
                         required
-                        className="input-field"
+                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50 transition-all duration-200"
                         placeholder="e.g. 12345"
                       />
                     </div>
@@ -504,8 +565,11 @@ export default function Communities() {
                 </div>
               </div>
               
-              <div className="mb-4">
-                <label htmlFor="description" className="block text-gray-700 font-medium mb-2">
+              <div className="mb-5">
+                <label htmlFor="description" className="block text-gray-700 font-medium mb-2 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+                  </svg>
                   Description
                 </label>
                 <textarea
@@ -515,13 +579,19 @@ export default function Communities() {
                   onChange={handleCreateInputChange}
                   required
                   rows={3}
-                  className="input-field"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50 transition-all duration-200"
                   placeholder="Tell us about your community..."
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Describe your community, its purpose, and any relevant details for potential members.
+                </p>
               </div>
               
               <div className="mb-6">
-                <label htmlFor="rules" className="block text-gray-700 font-medium mb-2">
+                <label htmlFor="rules" className="block text-gray-700 font-medium mb-2 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
                   Community Rules (Optional)
                 </label>
                 <textarea
@@ -530,33 +600,41 @@ export default function Communities() {
                   value={createFormData.rules}
                   onChange={handleCreateInputChange}
                   rows={3}
-                  className="input-field"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50 transition-all duration-200"
                   placeholder="Any specific rules or guidelines for your community..."
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Guidelines for community participation, ordering, and other important information for members.
+                </p>
               </div>
               
-              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-                <div className="flex">
-                  <div className="ml-3">
-                    <p className="text-sm text-yellow-700">
-                      Community creation requests need approval from Walmart before becoming active. This typically takes 1-2 business days.
-                    </p>
-                  </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 flex items-start">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500 mt-0.5 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm text-yellow-700">
+                    Community creation requests need approval from LastMile before becoming active. This typically takes 1-2 business days.
+                  </p>
+                  <p className="text-xs text-yellow-600 mt-1">
+                    During this time, you'll be the only member of the community and will be automatically designated as the community admin.
+                  </p>
                 </div>
               </div>
               
-              <div className="flex justify-end space-x-4">
+              <div className="flex justify-end gap-4">
                 <button
                   type="button"
-                  className="btn-secondary"
+                  className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-all duration-200"
                   onClick={() => setShowCreateModal(false)}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary"
+                  className="px-6 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-all duration-200 flex items-center"
                 >
+                  <FaUsers className="mr-2" />
                   Create Community
                 </button>
               </div>
@@ -567,14 +645,49 @@ export default function Communities() {
 
       {/* Join Community Modal */}
       {showJoinModal && selectedCommunity && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold mb-2">Join {selectedCommunity.name}</h2>
-            <p className="text-gray-600 mb-4">Your request will be reviewed by the community admin.</p>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <div className="bg-blue-100 text-blue-600 p-2 rounded-lg mr-3">
+                  <FaUserPlus className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">Join Community</h2>
+                  <p className="text-gray-600 text-sm mt-1">{selectedCommunity.name}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setSelectedCommunity(null);
+                  setShowJoinModal(false);
+                }} 
+                className="text-gray-500 hover:text-gray-700 focus:outline-none"
+                aria-label="Close modal"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm text-blue-700">
+                  Your request will be reviewed by the community admin. You'll be notified when your membership is approved.
+                </p>
+              </div>
+            </div>
             
             <form onSubmit={handleJoinRequest}>
               <div className="mb-6">
-                <label htmlFor="reason" className="block text-gray-700 font-medium mb-2">
+                <label htmlFor="reason" className="flex items-center text-gray-700 font-medium mb-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  </svg>
                   Why do you want to join this community?
                 </label>
                 <textarea
@@ -583,15 +696,18 @@ export default function Communities() {
                   onChange={(e) => setJoinReason(e.target.value)}
                   required
                   rows={4}
-                  className="input-field"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50 transition-all duration-200"
                   placeholder="Briefly tell the community admin why you'd like to join..."
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Introduce yourself and explain how you can contribute to the community. This will help the admin evaluate your request.
+                </p>
               </div>
               
-              <div className="flex justify-end space-x-4">
+              <div className="flex justify-end gap-4">
                 <button
                   type="button"
-                  className="btn-secondary"
+                  className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-all duration-200"
                   onClick={() => {
                     setSelectedCommunity(null);
                     setShowJoinModal(false);
@@ -601,8 +717,9 @@ export default function Communities() {
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary"
+                  className="px-5 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-all duration-200 flex items-center"
                 >
+                  <FaUserPlus className="mr-2" />
                   Submit Request
                 </button>
               </div>
