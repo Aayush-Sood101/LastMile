@@ -132,7 +132,9 @@ export default function PriceOptimizerPage() {
         axios.put(`http://localhost:5000/api/products/${product._id}`, 
           { 
             discountPercentage: product.discount,
-            discountedPrice: product.optimizedPrice
+            discountedPrice: product.optimizedPrice,
+            // We're also updating the price field to ensure the database reflects the change
+            price: product.originalPrice // Keep original price in the price field
           }, 
           { headers: { Authorization: `Bearer ${token}` } }
         )
@@ -140,6 +142,20 @@ export default function PriceOptimizerPage() {
       
       await Promise.all(updatePromises);
       setSuccess('Optimized prices saved successfully!');
+      
+      // Refresh the products list to show the updated prices
+      const response = await axios.get('http://localhost:5000/api/products', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Add quantity demanded field to each product
+      const productsWithDemand = response.data.map(product => ({
+        ...product,
+        quantityDemanded: product.popularityScore ? Math.round(product.popularityScore * 100) : 100
+      }));
+      
+      setProducts(productsWithDemand);
+      setResults(null); // Clear optimization results since they've been applied
     } catch (error) {
       console.error('Error saving optimized prices:', error);
       setError('Failed to save optimized prices. Please try again.');

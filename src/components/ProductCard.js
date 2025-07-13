@@ -92,8 +92,24 @@ export default function ProductCard({ product, onAddToCart }) {
       <div className="p-5 flex-grow flex flex-col">
         <div className="mb-2 flex items-start justify-between">
           <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 group-hover:text-primary-600 transition-colors">{product.name}</h3>
-          <div className="flex items-center ml-2 bg-primary-50 px-2 py-1 rounded-lg">
-            <div className="font-bold text-primary-700">${product.price.toFixed(2)}</div>
+          <div className="flex flex-col items-end ml-2">
+            {product.discountedPrice && product.discountedPrice < product.price ? (
+              <>
+                <div className="flex items-center bg-primary-50 px-2 py-1 rounded-lg">
+                  <div className="font-bold text-primary-700">${product.discountedPrice.toFixed(2)}</div>
+                </div>
+                <div className="text-sm text-gray-500 line-through mt-1">
+                  ${product.price.toFixed(2)}
+                </div>
+                <div className="text-xs text-green-600 font-medium mt-0.5">
+                  Save {product.discountPercentage}%
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center bg-primary-50 px-2 py-1 rounded-lg">
+                <div className="font-bold text-primary-700">${product.price.toFixed(2)}</div>
+              </div>
+            )}
           </div>
         </div>
         

@@ -220,7 +220,11 @@ export default function Cart() {
   // Calculate cart totals
   const calculateSubtotal = () => {
     return cart.items.reduce((total, item) => {
-      return total + (item.product.price * item.quantity);
+      // Use discounted price if available, otherwise use regular price
+      const priceToUse = (item.product.discountedPrice && item.product.discountedPrice < item.product.price) 
+        ? item.product.discountedPrice 
+        : item.product.price;
+      return total + (priceToUse * item.quantity);
     }, 0);
   };
 
@@ -358,9 +362,23 @@ export default function Cart() {
 
                       <div className="md:text-center mb-3 md:mb-0">
                         <div className="md:hidden text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Price</div>
-                        <div className="font-medium text-gray-700">
-                          ${item.product.price.toFixed(2)}
-                        </div>
+                        {item.product.discountedPrice && item.product.discountedPrice < item.product.price ? (
+                          <div>
+                            <div className="font-medium text-gray-700">
+                              ${item.product.discountedPrice.toFixed(2)}
+                            </div>
+                            <div className="text-xs text-gray-500 line-through">
+                              ${item.product.price.toFixed(2)}
+                            </div>
+                            <div className="text-xs text-green-600 font-medium">
+                              Save {item.product.discountPercentage}%
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="font-medium text-gray-700">
+                            ${item.product.price.toFixed(2)}
+                          </div>
+                        )}
                       </div>
 
                       <div className="md:text-center mb-3 md:mb-0">
@@ -390,7 +408,16 @@ export default function Cart() {
                       <div className="md:text-center flex items-center justify-between md:justify-center">
                         <div>
                           <div className="md:hidden text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Total</div>
-                          <span className="font-bold text-gray-800">${(item.product.price * item.quantity).toFixed(2)}</span>
+                          {item.product.discountedPrice && item.product.discountedPrice < item.product.price ? (
+                            <div>
+                              <span className="font-bold text-gray-800">${(item.product.discountedPrice * item.quantity).toFixed(2)}</span>
+                              <div className="text-xs text-gray-500 line-through">
+                                ${(item.product.price * item.quantity).toFixed(2)}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="font-bold text-gray-800">${(item.product.price * item.quantity).toFixed(2)}</span>
+                          )}
                         </div>
                         <button
                           className="text-red-500 hover:bg-red-50 p-2 rounded-full hover:text-red-700 md:ml-4 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
