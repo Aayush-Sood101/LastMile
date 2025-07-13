@@ -41,14 +41,22 @@ class PriceOptimizerAdvanced {
    * @returns {number} - Margin constraint value (≥ 0 means constraint is satisfied)
    */
   static marginConstraint(discounts, supplierCosts, operationalCosts, retailPrices, quantities, targetMargin) {
-    let sum = 0;
+    let totalRevenue = 0;
+    let totalCost = 0;
     
     for (let i = 0; i < discounts.length; i++) {
-      const term = quantities[i] * ((1 - targetMargin) * retailPrices[i] * (1 - discounts[i]) - supplierCosts[i] - operationalCosts[i]);
-      sum += term;
+      const discountedPrice = retailPrices[i] * (1 - discounts[i]);
+      totalRevenue += quantities[i] * discountedPrice;
+      totalCost += quantities[i] * (supplierCosts[i] + operationalCosts[i]);
     }
     
-    return sum;
+    // Calculate current margin
+    const totalProfit = totalRevenue - totalCost;
+    const currentMargin = totalRevenue > 0 ? totalProfit / totalRevenue : 0;
+    
+    // Constraint is satisfied if current margin >= target margin
+    // Return a positive value if constraint is satisfied
+    return (currentMargin - targetMargin) * totalRevenue;
   }
 
   /**
@@ -95,11 +103,15 @@ class PriceOptimizerAdvanced {
     let bestDiscounts = null;
     let bestObjective = Number.NEGATIVE_INFINITY;
     
+    // Use logistic map to create 1000 different chaotic discount patterns
     for (let k = 0; k < numIterations; k++) {
       c = this.logisticMap(c);
       
-      // Create uniform discounts for all products
-      const discounts = new Array(numDimensions).fill(lowerBound + (upperBound - lowerBound) * c);
+      // Create different discount for each product, not uniform
+      const discounts = new Array(numDimensions).fill(0).map(() => {
+        c = this.logisticMap(c);
+        return lowerBound + (upperBound - lowerBound) * c;
+      });
       
       // Check if constraints are satisfied
       const marginValue = this.marginConstraint(
@@ -117,6 +129,31 @@ class PriceOptimizerAdvanced {
         if (objectiveValue > bestObjective) {
           bestObjective = objectiveValue;
           bestDiscounts = [...discounts];
+        }
+      }
+    }
+    
+    // If no feasible solution found, try with minimum discounts to see if we can find at least something
+    if (!bestDiscounts) {
+      console.log("No full-range solution found, trying with minimal discounts");
+      // Try with very small discounts (1-5%)
+      for (let attempt = 0; attempt < 100; attempt++) {
+        const smallDiscounts = new Array(numDimensions).fill(0).map(() => 
+          Math.random() * 0.05 // 0-5% discount
+        );
+        
+        const marginValue = this.marginConstraint(
+          smallDiscounts, 
+          supplierCosts, 
+          operationalCosts, 
+          retailPrices, 
+          quantities, 
+          targetMargin
+        );
+        
+        if (marginValue >= 0) {
+          console.log("Found minimal discount solution");
+          return smallDiscounts;
         }
       }
     }
@@ -312,6 +349,34 @@ class PriceOptimizerAdvanced {
       quantitiesRange: [Math.min(...quantities), Math.max(...quantities)]
     });
     
+    // Check if the business is profitable with zero discounts
+    const zeroDiscounts = new Array(n).fill(0);
+    const zeroMargin = this.marginConstraint(
+      zeroDiscounts,
+      supplierCosts,
+      operationalCosts,
+      maxRetailPrices,
+      quantities,
+      targetMargin
+    );
+    
+    // If even zero discounts don't meet the margin, adjust the target margin to a feasible value
+    let adjustedTargetMargin = targetMargin;
+    if (zeroMargin < 0) {
+      console.log("Warning: Target margin not feasible even with zero discounts, adjusting down");
+      // Calculate the maximum achievable margin
+      let totalRevenue = 0;
+      let totalCost = 0;
+      for (let i = 0; i < n; i++) {
+        totalRevenue += quantities[i] * maxRetailPrices[i];
+        totalCost += quantities[i] * (supplierCosts[i] + operationalCosts[i]);
+      }
+      
+      const maxMargin = totalRevenue > 0 ? (totalRevenue - totalCost) / totalRevenue : 0;
+      adjustedTargetMargin = Math.max(0, maxMargin * 0.9); // Set to 90% of maximum achievable
+      console.log(`Adjusted target margin to ${(adjustedTargetMargin * 100).toFixed(2)}%`);
+    }
+    
     const lowerBound = 0.0;
     const upperBound = maxDiscount;
     
@@ -327,21 +392,69 @@ class PriceOptimizerAdvanced {
       operationalCosts,
       maxRetailPrices,
       quantities,
-      targetMargin
+      adjustedTargetMargin
     );
     
+    // If no feasible solution found, try a different approach with variable discounts
     if (!initialDiscounts) {
-      console.log("No feasible solution found in Stage I, using no discounts");
-      // Return a zero-discount solution
-      const discounts = new Array(n).fill(0);
-      const finalPrices = maxRetailPrices.map(p => p);
+      console.log("No feasible solution found in Stage I, trying direct approach");
+      // Calculate maximum possible discount for each product that maintains profitability
+      const directDiscounts = maxRetailPrices.map((mrp, i) => {
+        const cost = supplierCosts[i] + operationalCosts[i];
+        const minPrice = cost / (1 - adjustedTargetMargin);
+        if (minPrice >= mrp) return 0; // No discount possible
+        const maxPossibleDiscount = Math.max(0, 1 - (minPrice / mrp));
+        // Apply a fraction of the maximum possible discount
+        return Math.min(maxDiscount, maxPossibleDiscount * 0.7);
+      });
+      
+      // Check if this solution is feasible
+      const directMargin = this.marginConstraint(
+        directDiscounts,
+        supplierCosts,
+        operationalCosts,
+        maxRetailPrices,
+        quantities,
+        adjustedTargetMargin
+      );
+      
+      if (directMargin >= 0) {
+        console.log("Direct approach found a feasible solution");
+        // Calculate final results with direct discounts
+        const finalPrices = maxRetailPrices.map((mrp, i) => mrp * (1 - directDiscounts[i]));
+        const finalProfits = finalPrices.map((p, i) => (p - supplierCosts[i] - operationalCosts[i]) * quantities[i]);
+        const totalProfit = finalProfits.reduce((sum, p) => sum + p, 0);
+        const totalRevenue = finalPrices.reduce((sum, p, i) => sum + p * quantities[i], 0);
+        const finalMargin = totalRevenue > 0 ? totalProfit / totalRevenue : 0;
+        
+        return {
+          discounts: directDiscounts.map(d => d * 100), // Convert to percentage
+          prices: finalPrices,
+          profitPerProduct: finalProfits,
+          totalProfit,
+          totalRevenue,
+          margin: finalMargin * 100 // Convert to percentage
+        };
+      }
+      
+      // If direct approach also fails, return minimal discounts
+      console.log("No feasible solution found, using minimal discounts");
+      // Apply small discounts to high-margin products only
+      const minimalDiscounts = maxRetailPrices.map((mrp, i) => {
+        const cost = supplierCosts[i] + operationalCosts[i];
+        const currentMargin = (mrp - cost) / mrp;
+        // Only apply discounts to products with margin > target + 10%
+        return (currentMargin > (adjustedTargetMargin + 0.1)) ? 0.05 : 0;
+      });
+      
+      const finalPrices = maxRetailPrices.map((mrp, i) => mrp * (1 - minimalDiscounts[i]));
       const finalProfits = finalPrices.map((p, i) => (p - supplierCosts[i] - operationalCosts[i]) * quantities[i]);
       const totalProfit = finalProfits.reduce((sum, p) => sum + p, 0);
       const totalRevenue = finalPrices.reduce((sum, p, i) => sum + p * quantities[i], 0);
       const finalMargin = totalRevenue > 0 ? totalProfit / totalRevenue : 0;
       
       return {
-        discounts: discounts.map(d => d * 100), // Convert to percentage
+        discounts: minimalDiscounts.map(d => d * 100), // Convert to percentage
         prices: finalPrices,
         profitPerProduct: finalProfits,
         totalProfit,
@@ -362,7 +475,7 @@ class PriceOptimizerAdvanced {
       operationalCosts,
       maxRetailPrices,
       quantities,
-      targetMargin
+      adjustedTargetMargin
     );
     
     console.log("Optimized discounts:", optimizedDiscounts);

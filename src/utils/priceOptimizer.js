@@ -36,30 +36,91 @@ class PriceOptimizer {
       throw new Error('All input arrays must have the same length');
     }
 
-    // Simple gradient descent algorithm to maximize profit while meeting margin constraint
-    // In a real implementation, we'd use a more sophisticated optimization library
+    // First, check which products are actually profitable before optimization
+    const productProfitability = maxRetailPrices.map((price, i) => {
+      const cost = supplierCosts[i] + operationalCosts[i];
+      return {
+        index: i,
+        price: price,
+        cost: cost,
+        margin: (price - cost) / price,
+        profitable: price > cost
+      };
+    });
     
-    // Start with no discounts
-    let discounts = new Array(n).fill(0.05);
+    // Count profitable products
+    const profitableProducts = productProfitability.filter(p => p.profitable);
+    if (profitableProducts.length === 0) {
+      console.warn("No profitable products found. Cannot optimize.");
+      return {
+        discounts: new Array(n).fill(0),
+        prices: [...maxRetailPrices],
+        profitPerProduct: maxRetailPrices.map((p, i) => (p - supplierCosts[i] - operationalCosts[i]) * quantities[i]),
+        totalProfit: this.calculateTotalProfit(new Array(n).fill(0), supplierCosts, operationalCosts, maxRetailPrices, quantities),
+        totalRevenue: maxRetailPrices.reduce((sum, p, i) => sum + p * quantities[i], 0),
+        margin: 0
+      };
+    }
+
+    // Start with intelligent initial discounts - higher margins get higher discounts
+    let discounts = productProfitability.map(p => {
+      if (!p.profitable) return 0; // No discount for unprofitable products
+      
+      // Scale discount by profitability, max 20% of possible discount for initial value
+      const initialDiscount = Math.min(
+        maxDiscount * 0.2,
+        p.margin * 0.4 // 40% of the margin as discount
+      );
+      
+      return initialDiscount;
+    });
+    
     let bestDiscounts = [...discounts];
     let bestProfit = this.calculateTotalProfit(discounts, supplierCosts, operationalCosts, maxRetailPrices, quantities);
     let bestMargin = this.calculateMargin(discounts, supplierCosts, operationalCosts, maxRetailPrices, quantities);
     
     const learningRate = 0.01;
-    const iterations = 500;
+    const iterations = 1000; // Increased iteration count
     
+    // If initial margin is below target, adjust prices up first
+    const initialMargin = this.calculateMargin(discounts, supplierCosts, operationalCosts, maxRetailPrices, quantities);
+    if (initialMargin < targetMargin) {
+      // Reduce discounts on least profitable items first to improve margin
+      const productsByMargin = [...productProfitability].sort((a, b) => a.margin - b.margin);
+      
+      for (const product of productsByMargin) {
+        if (discounts[product.index] > 0) {
+          discounts[product.index] = 0; // Remove discount from this product
+          
+          const newMargin = this.calculateMargin(discounts, supplierCosts, operationalCosts, maxRetailPrices, quantities);
+          if (newMargin >= targetMargin) {
+            break; // We've reached the target margin
+          }
+        }
+      }
+      
+      // Update best values after initial adjustment
+      bestDiscounts = [...discounts];
+      bestProfit = this.calculateTotalProfit(discounts, supplierCosts, operationalCosts, maxRetailPrices, quantities);
+      bestMargin = this.calculateMargin(discounts, supplierCosts, operationalCosts, maxRetailPrices, quantities);
+    }
+    
+    // Main optimization loop
     for (let i = 0; i < iterations; i++) {
       // Try adjusting each discount
       for (let j = 0; j < n; j++) {
-        // Try increasing discount
+        // Skip unprofitable products
+        if (!productProfitability[j].profitable) continue;
+        
+        // Try increasing discount for profitable products
         if (discounts[j] < maxDiscount) {
           discounts[j] += learningRate;
           
           const profit = this.calculateTotalProfit(discounts, supplierCosts, operationalCosts, maxRetailPrices, quantities);
           const margin = this.calculateMargin(discounts, supplierCosts, operationalCosts, maxRetailPrices, quantities);
           
-          // If margin is above target and profit improved, keep the change
-          if (margin >= targetMargin && profit > bestProfit) {
+          // If margin is above target and profit is reasonable, keep the change
+          if (margin >= targetMargin && profit > 0) {
             bestDiscounts = [...discounts];
             bestProfit = profit;
             bestMargin = margin;
@@ -69,14 +130,14 @@ class PriceOptimizer {
           }
         }
         
-        // Try decreasing discount
+        // Try decreasing discount (to improve profit)
         if (discounts[j] > 0) {
           discounts[j] -= learningRate;
           
           const profit = this.calculateTotalProfit(discounts, supplierCosts, operationalCosts, maxRetailPrices, quantities);
           const margin = this.calculateMargin(discounts, supplierCosts, operationalCosts, maxRetailPrices, quantities);
           
-          // If margin is above target and profit improved, keep the change
+          // If profit improved while maintaining margin, keep the change
           if (margin >= targetMargin && profit > bestProfit) {
             bestDiscounts = [...discounts];
             bestProfit = profit;
@@ -86,6 +147,23 @@ class PriceOptimizer {
             discounts[j] += learningRate;
           }
         }
+      }
+      
+      // Adjust learning rate to fine-tune solution
+      if (i > iterations/2) {
+        // Reduce learning rate in later iterations
+        learningRate *= 0.99;
+      }
+    }
+    
+    // Ensure we don't have negative profits per product in the final solution
+    for (let i = 0; i < n; i++) {
+      const price = maxRetailPrices[i] * (1 - bestDiscounts[i]);
+      const cost = supplierCosts[i] + operationalCosts[i];
+      
+      // If a product has negative profit, remove its discount
+      if (price < cost) {
+        bestDiscounts[i] = 0;
       }
     }
     

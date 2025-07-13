@@ -329,16 +329,46 @@ export default function PriceOptimizerPage() {
           <h2 className="text-xl font-semibold mb-4">Optimization Results</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-gray-50 p-4 rounded">
-              <p className="text-sm font-medium text-gray-500">Total Profit</p>
-              <p className="text-2xl font-bold">₹{results.totalProfit.toFixed(2)}</p>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-lg shadow-sm border border-blue-200">
+              <p className="text-sm text-gray-600 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Total Profit
+              </p>
+              <p className="text-3xl font-bold text-blue-700">₹{results.totalProfit.toFixed(2)}</p>
             </div>
             
-            <div className="bg-gray-50 p-4 rounded">
-              <p className="text-sm font-medium text-gray-500">Overall Margin</p>
-              <p className="text-2xl font-bold">{results.margin.toFixed(2)}%</p>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-lg shadow-sm border border-blue-200">
+              <p className="text-sm text-gray-600 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                Overall Margin
+              </p>
+              <p className="text-3xl font-bold text-blue-700">{results.margin.toFixed(2)}%</p>
+              <div className="mt-2 bg-blue-200 h-2 rounded-full overflow-hidden">
+                <div 
+                  className="bg-blue-600 h-full rounded-full" 
+                  style={{ width: `${Math.min(100, (results.margin / targetMargin) * 100)}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-blue-700 mt-1">Target: {targetMargin}%</p>
             </div>
           </div>
+          
+          {results.productDetails.some(p => p.profit < 0) && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md mb-6">
+              <div className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <p className="text-sm text-yellow-700">
+                  <span className="font-medium">Warning:</span> Some products have negative profit margins. Consider adjusting supplier costs or operational costs for these products.
+                </p>
+              </div>
+            </div>
+          )}
           
           <div className="overflow-x-auto mt-6">
             <table className="min-w-full divide-y divide-gray-200">
@@ -362,35 +392,47 @@ export default function PriceOptimizerPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {results.productDetails.map((product) => (
-                  <tr key={product._id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {product.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {product.originalPrice.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap font-medium text-green-600">
-                      {product.optimizedPrice.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {product.discount.toFixed(2)}%
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {product.profit.toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
+                {results.productDetails.map((product) => {
+                  const isProfitable = product.profit >= 0;
+                  return (
+                    <tr key={product._id} className={!isProfitable ? "bg-red-50" : ""}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {product.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {product.originalPrice.toFixed(2)}
+                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap font-medium ${product.discount > 0 ? "text-green-600" : "text-gray-600"}`}>
+                        {product.optimizedPrice.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {product.discount > 0 ? (
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                            {product.discount.toFixed(2)}%
+                          </span>
+                        ) : (
+                          <span className="text-gray-500">0.00%</span>
+                        )}
+                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap font-medium ${isProfitable ? "text-green-600" : "text-red-600"}`}>
+                        {product.profit.toFixed(2)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           
-          <div className="mt-6">
+          <div className="mt-6 flex justify-end">
             <button
               onClick={saveOptimizedPrices}
               disabled={loading}
-              className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded"
+              className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium flex items-center shadow-md"
             >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
               {loading ? 'Saving...' : 'Apply Optimized Prices'}
             </button>
           </div>
