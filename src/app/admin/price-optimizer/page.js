@@ -81,7 +81,7 @@ export default function PriceOptimizerPage() {
     try {
       // Prepare data for optimization
       const supplierCosts = products.map(p => p.costPrice || 0);
-      const operationalCosts = products.map(p => p.operationalCost || 5); // Default to 5 if not provided
+      const operationalCosts = products.map(p => p.operationalCost || 0.2); // Default to 0.2 if not provided
       const maxRetailPrices = products.map(p => p.price || 0);
       const quantities = products.map(p => p.quantityDemanded || 100);
       
@@ -103,11 +103,11 @@ export default function PriceOptimizerPage() {
           name: product.name,
           originalPrice: product.price,
           supplierCost: product.costPrice || 0,
-          operationalCost: product.operationalCost || 5,
+          operationalCost: product.operationalCost || 0.2,
           optimizedPrice: optimizationResults.prices[i],
           discount: optimizationResults.discounts[i],
           profit: optimizationResults.profitPerProduct[i],
-          unitProfit: optimizationResults.prices[i] - (product.costPrice || 0) - (product.operationalCost || 5)
+          unitProfit: optimizationResults.prices[i] - (product.costPrice || 0) - (product.operationalCost || 0.2)
         }))
       };
       
@@ -298,7 +298,7 @@ export default function PriceOptimizerPage() {
                   <td className="px-6 py-4 whitespace-nowrap">{product.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{product.price.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{product.costPrice ? product.costPrice.toFixed(2) : 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{product.operationalCost ? product.operationalCost.toFixed(2) : '2.00'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{product.operationalCost ? product.operationalCost.toFixed(2) : '0.20'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input
                       type="number"
