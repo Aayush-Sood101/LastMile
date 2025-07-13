@@ -6,6 +6,7 @@ import React from 'react';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import { useToast } from '@/components/Toast';
+import CO2EmissionsSavingsCard from '@/components/CO2EmissionsSavingsCard';
 import { FaCheckCircle, FaTruck, FaBox, FaLeaf, FaMapMarkerAlt, FaCreditCard, FaCalendarAlt, FaUsers } from 'react-icons/fa';
 
 export default function OrderDetails({ params }) {
@@ -267,6 +268,13 @@ export default function OrderDetails({ params }) {
                 </div>
               </div>
             </div>
+            
+            {/* CO2 Emissions Savings */}
+            {order.isGroupOrder && (
+              <div className="mt-6 mb-6">
+                <CO2EmissionsSavingsCard orderId={order._id} />
+              </div>
+            )}
             
             {/* Action Buttons */}
             <div className="flex flex-col md:flex-row justify-center gap-4 mt-6">

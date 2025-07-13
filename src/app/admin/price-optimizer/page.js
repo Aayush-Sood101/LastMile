@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import PriceOptimizer from '@/utils/priceOptimizer';
+import PriceOptimizerAdvanced from '@/utils/priceOptimizerAdvanced';
 import { PricingAPI } from '@/utils/pricingApi';
 import axios from 'axios';
 import { FaChevronLeft, FaSignOutAlt, FaStore } from 'react-icons/fa';
@@ -85,8 +85,8 @@ export default function PriceOptimizerPage() {
       const maxRetailPrices = products.map(p => p.price || 0);
       const quantities = products.map(p => p.quantityDemanded || 100);
       
-      // Run optimization
-      const optimizationResults = PriceOptimizer.optimizeDiscounts({
+      // Run advanced optimization
+      const optimizationResults = PriceOptimizerAdvanced.optimizeDiscounts({
         supplierCosts,
         operationalCosts,
         maxRetailPrices,

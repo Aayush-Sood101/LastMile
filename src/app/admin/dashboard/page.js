@@ -21,7 +21,8 @@ import {
   FaPlus,
   FaImage,
   FaDollarSign,
-  FaTag
+  FaTag,
+  FaTruck
 } from 'react-icons/fa';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Title } from 'chart.js';
 import { Doughnut, Line } from 'react-chartjs-2';
@@ -577,6 +578,16 @@ export default function AdminDashboard() {
               </div>
               <span>Price Optimizer</span>
             </a>
+            
+            <a 
+              href="/admin/logistics-optimizer"
+              className="flex items-center space-x-3 w-full p-3.5 rounded-xl mb-1 text-left hover:bg-gray-50 transition-all duration-200"
+            >
+              <div className="p-2 rounded-lg bg-gray-100">
+                <FaTruck className="h-4 w-4" />
+              </div>
+              <span>Logistics Optimizer</span>
+            </a>
           </nav>
         </div>
         
@@ -691,6 +702,16 @@ export default function AdminDashboard() {
                 <FaDollarSign className="h-4 w-4" />
               </div>
               <span>Price Optimizer</span>
+            </a>
+            
+            <a 
+              href="/admin/logistics-optimizer" 
+              className="flex items-center space-x-3 w-full p-3 rounded-xl hover:bg-gray-50 text-gray-700"
+            >
+              <div className="p-2 rounded-lg bg-gray-100">
+                <FaTruck className="h-4 w-4" />
+              </div>
+              <span>Logistics Optimizer</span>
             </a>
             
             <button 
