@@ -36,17 +36,29 @@ class PriceOptimizer {
       throw new Error('All input arrays must have the same length');
     }
 
+    console.log("Starting optimization with:");
+    console.log("- Supplier costs:", supplierCosts);
+    console.log("- Operational costs:", operationalCosts);
+    console.log("- Retail prices:", maxRetailPrices);
+    console.log("- Target margin:", targetMargin);
+
     // First, check which products are actually profitable before optimization
     const productProfitability = maxRetailPrices.map((price, i) => {
-      const cost = supplierCosts[i] + operationalCosts[i];
+      const totalCost = supplierCosts[i] + operationalCosts[i];
+      const currentMargin = (price - totalCost) / price;
+      
       return {
         index: i,
         price: price,
-        cost: cost,
-        margin: (price - cost) / price,
-        profitable: price > cost
+        supplierCost: supplierCosts[i],
+        operationalCost: operationalCosts[i],
+        totalCost: totalCost,
+        currentMargin: currentMargin,
+        profitable: price > totalCost
       };
     });
+    
+    console.log("Product profitability analysis:", productProfitability);
     
     // Count profitable products
     const profitableProducts = productProfitability.filter(p => p.profitable);
@@ -66,12 +78,21 @@ class PriceOptimizer {
     let discounts = productProfitability.map(p => {
       if (!p.profitable) return 0; // No discount for unprofitable products
       
+      // Only apply discounts to products with sufficient margin
+      if (p.currentMargin < targetMargin * 1.2) {
+        // Products near or below target margin get no discount
+        return 0;
+      }
+      
       // Scale discount by profitability, max 20% of possible discount for initial value
+      // The higher the margin compared to target, the more discount we can apply
+      const marginRatio = p.currentMargin / targetMargin;
       const initialDiscount = Math.min(
         maxDiscount * 0.2,
-        p.margin * 0.4 // 40% of the margin as discount
+        p.currentMargin * 0.3 * (marginRatio - 1)
       );
       
+      console.log(`Product ${p.index}: margin ${p.currentMargin.toFixed(2)}, initial discount ${initialDiscount.toFixed(2)}`);
       return initialDiscount;
     });
     
@@ -159,11 +180,19 @@ class PriceOptimizer {
     // Ensure we don't have negative profits per product in the final solution
     for (let i = 0; i < n; i++) {
       const price = maxRetailPrices[i] * (1 - bestDiscounts[i]);
-      const cost = supplierCosts[i] + operationalCosts[i];
+      const totalCost = supplierCosts[i] + operationalCosts[i];
       
-      // If a product has negative profit, remove its discount
-      if (price < cost) {
+      // Calculate unit profit margin
+      const unitProfit = price - totalCost;
+      const unitProfitMargin = price > 0 ? unitProfit / price : 0;
+      
+      console.log(`Product ${i}: Final price ${price.toFixed(2)}, cost ${totalCost.toFixed(2)}, profit ${unitProfit.toFixed(2)}`);
+      
+      // If a product has negative or insufficient profit, adjust discount to maintain minimal profitability
+      if (unitProfit <= 0 || unitProfitMargin < targetMargin * 0.5) {
+        // Remove discount completely
         bestDiscounts[i] = 0;
+        console.log(`  -> Removed discount for product ${i} due to negative/insufficient profit`);
       }
     }
     

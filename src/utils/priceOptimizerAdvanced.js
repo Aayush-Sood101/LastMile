@@ -400,12 +400,33 @@ class PriceOptimizerAdvanced {
       console.log("No feasible solution found in Stage I, trying direct approach");
       // Calculate maximum possible discount for each product that maintains profitability
       const directDiscounts = maxRetailPrices.map((mrp, i) => {
-        const cost = supplierCosts[i] + operationalCosts[i];
-        const minPrice = cost / (1 - adjustedTargetMargin);
-        if (minPrice >= mrp) return 0; // No discount possible
+        const supplierCost = supplierCosts[i];
+        const opCost = operationalCosts[i];
+        const totalCost = supplierCost + opCost;
+        
+        console.log(`Direct approach - Product ${i}:`);
+        console.log(`  - Retail price: ${mrp.toFixed(2)}`);
+        console.log(`  - Supplier cost: ${supplierCost.toFixed(2)}`);
+        console.log(`  - Operational cost: ${opCost.toFixed(2)}`);
+        console.log(`  - Total cost: ${totalCost.toFixed(2)}`);
+        
+        // The minimum price to achieve target margin
+        const minPrice = totalCost / (1 - adjustedTargetMargin);
+        console.log(`  - Min price for ${(adjustedTargetMargin * 100).toFixed(1)}% margin: ${minPrice.toFixed(2)}`);
+        
+        if (minPrice >= mrp) {
+          console.log(`  - No discount possible (min price > retail price)`);
+          return 0; // No discount possible
+        }
+        
         const maxPossibleDiscount = Math.max(0, 1 - (minPrice / mrp));
-        // Apply a fraction of the maximum possible discount
-        return Math.min(maxDiscount, maxPossibleDiscount * 0.7);
+        // Apply a fraction of the maximum possible discount to be safe
+        const safeDiscount = Math.min(maxDiscount, maxPossibleDiscount * 0.7);
+        
+        console.log(`  - Max possible discount: ${(maxPossibleDiscount * 100).toFixed(2)}%`);
+        console.log(`  - Safe discount applied: ${(safeDiscount * 100).toFixed(2)}%`);
+        
+        return safeDiscount;
       });
       
       // Check if this solution is feasible
@@ -443,8 +464,12 @@ class PriceOptimizerAdvanced {
       const minimalDiscounts = maxRetailPrices.map((mrp, i) => {
         const cost = supplierCosts[i] + operationalCosts[i];
         const currentMargin = (mrp - cost) / mrp;
+        console.log(`Product ${i}: Price ${mrp.toFixed(2)}, Cost ${cost.toFixed(2)} (${supplierCosts[i].toFixed(2)} + ${operationalCosts[i].toFixed(2)}), Margin ${(currentMargin * 100).toFixed(2)}%`);
+        
         // Only apply discounts to products with margin > target + 10%
-        return (currentMargin > (adjustedTargetMargin + 0.1)) ? 0.05 : 0;
+        const shouldDiscount = (currentMargin > (adjustedTargetMargin + 0.1));
+        console.log(`  -> ${shouldDiscount ? "Apply discount" : "No discount"}`);
+        return shouldDiscount ? 0.05 : 0;
       });
       
       const finalPrices = maxRetailPrices.map((mrp, i) => mrp * (1 - minimalDiscounts[i]));

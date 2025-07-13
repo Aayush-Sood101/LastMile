@@ -102,9 +102,12 @@ export default function PriceOptimizerPage() {
           _id: product._id,
           name: product.name,
           originalPrice: product.price,
+          supplierCost: product.costPrice || 0,
+          operationalCost: product.operationalCost || 5,
           optimizedPrice: optimizationResults.prices[i],
           discount: optimizationResults.discounts[i],
-          profit: optimizationResults.profitPerProduct[i]
+          profit: optimizationResults.profitPerProduct[i],
+          unitProfit: optimizationResults.prices[i] - (product.costPrice || 0) - (product.operationalCost || 5)
         }))
       };
       
@@ -278,36 +281,24 @@ export default function PriceOptimizerPage() {
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">Products</h2>
         
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Product
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Price (₹)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cost (₹)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Quantity Demanded
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+        <div className="overflow-x-auto">{/* Important: no whitespace between tags */}
+          <table className="min-w-full divide-y divide-gray-200">{/* Important: no whitespace between tags */}
+            <thead className="bg-gray-50">{/* Important: no whitespace between tags */}
+              <tr>{/* Important: no whitespace between table elements */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price (₹)</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier Cost (₹)</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Op. Cost (₹)</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity Demanded</th>
+              </tr>{/* Important: no whitespace between elements */}
+            </thead>{/* Important: no whitespace between elements */}
+            <tbody className="bg-white divide-y divide-gray-200">{/* Important: no whitespace between elements */}
               {products.map((product) => (
                 <tr key={product._id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {product.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {product.price}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {product.costPrice || 'N/A'}
-                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">{product.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{product.price.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{product.costPrice ? product.costPrice.toFixed(2) : 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{product.operationalCost ? product.operationalCost.toFixed(2) : '2.00'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input
                       type="number"
@@ -319,8 +310,8 @@ export default function PriceOptimizerPage() {
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+            </tbody>{/* Important: no whitespace between tags */}
+          </table>{/* Important: no whitespace between tags */}
         </div>
       </div>
       
@@ -357,71 +348,81 @@ export default function PriceOptimizerPage() {
             </div>
           </div>
           
-          {results.productDetails.some(p => p.profit < 0) && (
+          {results.productDetails.some(p => p.profit < 0 || p.unitProfit < 0) && (
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md mb-6">
               <div className="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400 mr-2" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
-                <p className="text-sm text-yellow-700">
-                  <span className="font-medium">Warning:</span> Some products have negative profit margins. Consider adjusting supplier costs or operational costs for these products.
-                </p>
+                <div className="text-sm text-yellow-700">
+                  <p className="font-medium mb-1">Warning: Some products have low or negative profit margins</p>
+                  <ul className="list-disc ml-5 space-y-1">
+                    <li>Products with supplier cost + operational cost higher than or close to the price cannot be discounted</li>
+                    <li>Consider adjusting supplier costs or increasing prices for these products</li>
+                    <li>The optimization algorithm will avoid discounting unprofitable products</li>
+                  </ul>
+                </div>
               </div>
             </div>
           )}
           
-          <div className="overflow-x-auto mt-6">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Original Price (₹)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Optimized Price (₹)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Discount (%)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Profit (₹)
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+          {/* Explanation card */}
+          <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-md mb-6">
+            <div className="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <div className="text-sm text-blue-700">
+                <p className="font-medium mb-1">Price Optimization Details:</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Original Price: The initial retail price before any discount</li>
+                  <li>Supplier Cost: The cost of purchasing the product from suppliers</li>
+                  <li>Op. Cost: Operational costs including logistics, storage, etc.</li>
+                  <li>Unit Profit: Profit per unit (Optimized Price - Supplier Cost - Op. Cost)</li>
+                  <li>Total Profit: Unit profit multiplied by quantity demanded</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto mt-6">{/* Important: no whitespace between tags */}
+            <table className="min-w-full divide-y divide-gray-200">{/* Important: no whitespace between tags */}
+              <thead className="bg-gray-50">{/* Important: no whitespace between tags */}
+                <tr>{/* Important: no whitespace between tags */}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Original Price (₹)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier Cost (₹)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Op. Cost (₹)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Optimized Price (₹)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount (%)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Profit (₹)</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Profit (₹)</th>
+                </tr>{/* Important: no whitespace between tags */}
+              </thead>{/* Important: no whitespace between tags */}
+              <tbody className="bg-white divide-y divide-gray-200">{/* Important: no whitespace between tags */}
                 {results.productDetails.map((product) => {
                   const isProfitable = product.profit >= 0;
                   return (
                     <tr key={product._id} className={!isProfitable ? "bg-red-50" : ""}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {product.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {product.originalPrice.toFixed(2)}
-                      </td>
-                      <td className={`px-6 py-4 whitespace-nowrap font-medium ${product.discount > 0 ? "text-green-600" : "text-gray-600"}`}>
-                        {product.optimizedPrice.toFixed(2)}
-                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">{product.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{product.originalPrice.toFixed(2)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-600">{product.supplierCost.toFixed(2)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-600">{product.operationalCost.toFixed(2)}</td>
+                      <td className={`px-6 py-4 whitespace-nowrap font-medium ${product.discount > 0 ? "text-green-600" : "text-gray-600"}`}>{product.optimizedPrice.toFixed(2)}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {product.discount > 0 ? (
-                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                            {product.discount.toFixed(2)}%
-                          </span>
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">{product.discount.toFixed(2)}%</span>
                         ) : (
                           <span className="text-gray-500">0.00%</span>
                         )}
                       </td>
-                      <td className={`px-6 py-4 whitespace-nowrap font-medium ${isProfitable ? "text-green-600" : "text-red-600"}`}>
-                        {product.profit.toFixed(2)}
-                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap font-medium ${product.unitProfit > 0 ? "text-green-600" : "text-red-600"}`}>{product.unitProfit.toFixed(2)}</td>
+                      <td className={`px-6 py-4 whitespace-nowrap font-medium ${isProfitable ? "text-green-600" : "text-red-600"}`}>{product.profit.toFixed(2)}</td>
                     </tr>
                   );
                 })}
-              </tbody>
-            </table>
+              </tbody>{/* Important: no whitespace between tags */}
+            </table>{/* Important: no whitespace between tags */}
           </div>
           
           <div className="mt-6 flex justify-end">
