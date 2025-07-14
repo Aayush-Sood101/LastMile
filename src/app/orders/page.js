@@ -8,6 +8,7 @@ import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardBody, Button } from '@/components/Card';
 import { useToast } from '@/components/Toast';
+import { API_URL } from '@/utils/apiConfig';
 import { 
   FaBox, 
   FaTruck, 
@@ -53,7 +54,7 @@ export default function Orders() {
       const token = localStorage.getItem('token');
       
       const response = await axios.get(
-        'http://localhost:5000/api/orders',
+        `${API_URL}/api/orders`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       

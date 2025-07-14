@@ -11,17 +11,6 @@ export default function NotificationBell({ userId, isMobile = false }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // Only fetch notifications if userId is provided
-    if (userId) {
-      fetchNotifications();
-      
-      // Set up polling to check for new notifications every minute
-      const interval = setInterval(fetchNotifications, 60000);
-      return () => clearInterval(interval);
-    }
-  }, [userId, fetchNotifications]);
-
   const fetchNotifications = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -40,6 +29,17 @@ export default function NotificationBell({ userId, isMobile = false }) {
       setLoading(false);
     }
   }, [API_URL, setLoading, setNotifications]);
+
+  useEffect(() => {
+    // Only fetch notifications if userId is provided
+    if (userId) {
+      fetchNotifications();
+      
+      // Set up polling to check for new notifications every minute
+      const interval = setInterval(fetchNotifications, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [userId, fetchNotifications]);
 
   const markAsRead = async (id) => {
     try {
