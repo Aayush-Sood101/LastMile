@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { FaBox, FaTruck, FaCheckCircle, FaTimesCircle, FaAngleRight } from 'react-icons/fa';
 import { useToast } from '@/components/Toast';
+import { API_URL, getAuthHeaders } from '@/utils/apiConfig';
 
 export default function OrdersList() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function OrdersList() {
       }
       
       const response = await axios.get(
-        'http://localhost:5000/api/orders',
+        `${API_URL}/api/orders`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -112,7 +113,7 @@ export default function OrdersList() {
         </div>
         <h3 className="text-xl font-semibold mb-2">No Orders Yet</h3>
         <p className="text-gray-600 mb-6 max-w-md mx-auto">
-          You haven't placed any orders yet. Start shopping to see your order history here.
+          You haven&apos;t placed any orders yet. Start shopping to see your order history here.
         </p>
         <button
           className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors duration-200 inline-flex items-center"

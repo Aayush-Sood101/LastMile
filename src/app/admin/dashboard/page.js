@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardBody, Button, Input } from '@/components/Card';
+import { API_URL, getAuthHeaders } from '@/utils/apiConfig';
 import { 
   FaUsers, 
   FaUserCheck, 
@@ -99,7 +100,7 @@ export default function AdminDashboard() {
     const verifyToken = async () => {
       try {
         // Use the dashboard endpoint that we know exists to verify the token
-        await axios.get('http://localhost:5000/api/admin/dashboard', {
+        await axios.get(`${API_URL}/api/admin/dashboard`, {
           headers: { 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -119,7 +120,7 @@ export default function AdminDashboard() {
     };
 
     verifyToken();
-  }, [router]);
+  }, [router, activeTab, API_URL]);
 
   // Show toast message
   const showToast = (message, type = 'success') => {
@@ -129,7 +130,7 @@ export default function AdminDashboard() {
     }, 3000);
   };
 
-  const loadTabData = async (tab) => {
+  const loadTabData = useCallback(async (tab) => {
     setLoading(true);
     setError(null);
     
@@ -148,11 +149,11 @@ export default function AdminDashboard() {
           // Fetch both dashboard data and user stats
           const [dashboardResponse, userStatsResponse] = await Promise.all([
             axios.get(
-              'http://localhost:5000/api/admin/dashboard',
+              `${API_URL}/api/admin/dashboard`,
               { headers: { Authorization: `Bearer ${token}` } }
             ),
             axios.get(
-              'http://localhost:5000/api/admin/user-stats',
+              `${API_URL}/api/admin/user-stats`,
               { headers: { Authorization: `Bearer ${token}` } }
             )
           ]);
@@ -171,7 +172,7 @@ export default function AdminDashboard() {
           
         case 'communities':
           const communitiesResponse = await axios.get(
-            'http://localhost:5000/api/admin/community-requests',
+            `${API_URL}/api/admin/community-requests`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           
@@ -194,7 +195,7 @@ export default function AdminDashboard() {
           
         case 'orders':
           const ordersResponse = await axios.get(
-            'http://localhost:5000/api/admin/orders',
+            `${API_URL}/api/admin/orders`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           setOrders(ordersResponse.data);
@@ -205,7 +206,7 @@ export default function AdminDashboard() {
           
           // For Walmart admin, use the regular products endpoint
           const productsResponse = await axios.get(
-            'http://localhost:5000/api/products',
+            `${API_URL}/api/products`,
             { 
               headers: { 
                 'Authorization': `Bearer ${token}`
@@ -221,7 +222,7 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_URL, setCommunityRequests, setDashboardData, setError, setLoading, setOrders, setProducts]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -233,7 +234,7 @@ export default function AdminDashboard() {
       setLoading(true);
       const token = localStorage.getItem('token');
       await axios.put(
-        `http://localhost:5000/api/communities/${communityId}/approve`,
+        `${API_URL}/api/communities/${communityId}/approve`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -259,7 +260,7 @@ export default function AdminDashboard() {
       setLoading(true);
       const token = localStorage.getItem('token');
       await axios.put(
-        `http://localhost:5000/api/communities/${communityId}/reject`,
+        `${API_URL}/api/communities/${communityId}/reject`,
         { reason },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -403,7 +404,7 @@ export default function AdminDashboard() {
         
         // For Walmart admin, use the regular products endpoint but with token
         await axios.put(
-          `http://localhost:5000/api/products/${currentProduct._id}`,
+          `${API_URL}/api/products/${currentProduct._id}`,
           productData,
           config
         );
@@ -417,7 +418,7 @@ export default function AdminDashboard() {
         
         // For Walmart admin, use the regular products endpoint but with token
         await axios.post(
-          'http://localhost:5000/api/products',
+          `${API_URL}/api/products`,
           productData,
           config
         );
@@ -473,7 +474,7 @@ export default function AdminDashboard() {
       
       // For Walmart admin, use the regular products endpoint but with token
       await axios.delete(
-        `http://localhost:5000/api/products/${productId}`,
+        `${API_URL}/api/products/${productId}`,
         config
       );
       

@@ -9,6 +9,7 @@ import ProductCard from '@/components/ProductCard';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardBody, Button } from '@/components/Card';
 import { FaSearch, FaFilter, FaTimes, FaLeaf, FaShoppingBasket } from 'react-icons/fa';
+import { API_URL, getAuthHeaders } from '@/utils/apiConfig';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/products', {
+      const response = await axios.get(`${API_URL}/api/products`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -88,7 +89,7 @@ export default function Dashboard() {
               </span>
               LastMile Products
             </h1>
-            <p className="text-gray-600 mt-1">Find groceries and household items for your neighborhood's next delivery</p>
+            <p className="text-gray-600 mt-1">Find groceries and household items for your neighborhood&apos;s next delivery</p>
           </div>
           
           <div className="flex w-full md:w-auto space-x-2">
@@ -257,7 +258,7 @@ export default function Dashboard() {
                   </p>
                   {searchTerm && (
                     <div className="flex items-center bg-primary-50 px-3 py-1 rounded-lg">
-                      <p className="text-sm text-primary-700">Search: "{searchTerm}"</p>
+                      <p className="text-sm text-primary-700">Search: &quot;{searchTerm}&quot;</p>
                       <button 
                         className="ml-2 text-primary-600 hover:text-primary-800"
                         onClick={() => setSearchTerm('')}
@@ -288,7 +289,7 @@ export default function Dashboard() {
                   </div>
                   <h3 className="text-xl font-semibold mb-2">No products found</h3>
                   <p className="text-gray-600 max-w-xs mx-auto">
-                    We couldn't find any products matching your criteria. Try adjusting your search or filters.
+                    We couldn&apos;t find any products matching your criteria. Try adjusting your search or filters.
                   </p>
                   {(searchTerm || selectedCategory) && (
                     <button 

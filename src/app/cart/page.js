@@ -15,9 +15,11 @@ import {
   FaPlus,
   FaMinus,
   FaCreditCard,
-  FaMapMarkerAlt
+  FaMapMarkerAlt,
+  FaUsers
 } from 'react-icons/fa';
 import { useToast } from '@/components/Toast';
+import { API_URL, getAuthHeaders } from '@/utils/apiConfig';
 
 export default function Cart() {
   const router = useRouter();
@@ -45,7 +47,7 @@ export default function Cart() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/cart', {
+      const response = await axios.get(`${API_URL}/api/cart`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -63,7 +65,7 @@ export default function Cart() {
   const fetchCarbonFootprint = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/cart/carbon-footprint', {
+      const response = await axios.get(`${API_URL}/api/cart/carbon-footprint`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -81,7 +83,7 @@ export default function Cart() {
     try {
       const token = localStorage.getItem('token');
       await axios.put(
-        'http://localhost:5000/api/cart/update-item',
+        `${API_URL}/api/cart/update-item`,
         {
           productId: itemId,
           quantity: newQuantity
@@ -114,7 +116,7 @@ export default function Cart() {
   const handleRemoveItem = async (itemId) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/cart/remove-item/${itemId}`, {
+      await axios.delete(`${API_URL}/api/cart/remove-item/${itemId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -147,7 +149,7 @@ export default function Cart() {
       
       // Get the user's info to use for shipping address
       const userResponse = await axios.get(
-        'http://localhost:5000/api/users/me',
+        `${API_URL}/api/users/me`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -156,7 +158,7 @@ export default function Cart() {
       
       // Create the order
       const response = await axios.post(
-        'http://localhost:5000/api/orders',
+        `${API_URL}/api/orders`,
         {
           shippingAddress: {
             street: userAddress.street || '',
@@ -548,7 +550,7 @@ export default function Cart() {
                         <span className="text-green-700 font-medium">{carbonFootprint.bulkDelivery?.toFixed(2) || '0.00'} kg CO2</span>
                       </div>
                       <div className="flex justify-between font-medium pt-2 border-t border-green-200 mt-2">
-                        <span>You're Saving:</span>
+                        <span>You&apos;re Saving:</span>
                         <span className="text-green-700 font-bold">{((carbonFootprint.individualDelivery || 0) - (carbonFootprint.bulkDelivery || 0)).toFixed(2)} kg CO2</span>
                       </div>
                     </div>
@@ -588,7 +590,7 @@ export default function Cart() {
             </div>
             <h3 className="text-2xl font-semibold mb-3 text-gray-800">Your cart is empty</h3>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              Looks like you haven't added any products to your cart yet. Start exploring our products to add items to your cart.
+              Looks like you haven&apos;t added any products to your cart yet. Start exploring our products to add items to your cart.
             </p>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <button

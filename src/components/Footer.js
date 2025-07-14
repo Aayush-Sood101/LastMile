@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Footer() {
   return (
@@ -150,9 +151,33 @@ export default function Footer() {
             
             <div className="mt-6 flex items-center">
               <div className="flex -space-x-2 mr-3">
-                <img className="w-8 h-8 rounded-full border-2 border-gray-900" src="https://randomuser.me/api/portraits/women/12.jpg" alt="User" />
-                <img className="w-8 h-8 rounded-full border-2 border-gray-900" src="https://randomuser.me/api/portraits/men/32.jpg" alt="User" />
-                <img className="w-8 h-8 rounded-full border-2 border-gray-900" src="https://randomuser.me/api/portraits/women/45.jpg" alt="User" />
+                <div className="w-8 h-8 rounded-full border-2 border-gray-900 relative">
+                  <Image 
+                    className="rounded-full" 
+                    src="https://randomuser.me/api/portraits/women/12.jpg" 
+                    alt="User" 
+                    width={32} 
+                    height={32} 
+                  />
+                </div>
+                <div className="w-8 h-8 rounded-full border-2 border-gray-900 relative">
+                  <Image 
+                    className="rounded-full" 
+                    src="https://randomuser.me/api/portraits/men/32.jpg" 
+                    alt="User" 
+                    width={32} 
+                    height={32} 
+                  />
+                </div>
+                <div className="w-8 h-8 rounded-full border-2 border-gray-900 relative">
+                  <Image 
+                    className="rounded-full" 
+                    src="https://randomuser.me/api/portraits/women/45.jpg" 
+                    alt="User" 
+                    width={32} 
+                    height={32} 
+                  />
+                </div>
               </div>
               <p className="text-xs text-gray-500">Join 2,500+ community members</p>
             </div>

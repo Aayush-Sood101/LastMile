@@ -6,6 +6,7 @@ import PriceOptimizerAdvanced from '@/utils/priceOptimizerAdvanced';
 import { PricingAPI } from '@/utils/pricingApi';
 import axios from 'axios';
 import { FaChevronLeft, FaSignOutAlt, FaStore } from 'react-icons/fa';
+import { API_URL, getAuthHeaders } from '@/utils/apiConfig';
 
 export default function PriceOptimizerPage() {
   const router = useRouter();
@@ -46,7 +47,7 @@ export default function PriceOptimizerPage() {
   
   const fetchProducts = async (token) => {
     try {
-      const response = await axios.get('http://localhost:5000/api/products', {
+      const response = await axios.get(`${API_URL}/api/products`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -129,7 +130,7 @@ export default function PriceOptimizerPage() {
       // Update each product with its optimized price
       const token = localStorage.getItem('token');
       const updatePromises = results.productDetails.map(product => 
-        axios.put(`http://localhost:5000/api/products/${product._id}`, 
+        axios.put(`${API_URL}/api/products/${product._id}`, 
           { 
             discountPercentage: product.discount,
             discountedPrice: product.optimizedPrice,
@@ -144,7 +145,7 @@ export default function PriceOptimizerPage() {
       setSuccess('Optimized prices saved successfully!');
       
       // Refresh the products list to show the updated prices
-      const response = await axios.get('http://localhost:5000/api/products', {
+      const response = await axios.get(`${API_URL}/api/products`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import { FaUsers, FaUserPlus, FaUserMinus, FaCheckCircle, FaTimesCircle, FaLeaf, FaTruck, FaShoppingBag, FaCrown } from 'react-icons/fa';
+import { API_URL, getAuthHeaders } from '@/utils/apiConfig';
 
 export default function CommunityDetail({ params }) {
   const router = useRouter();
@@ -74,7 +75,7 @@ export default function CommunityDetail({ params }) {
         checkAdminStatus();
       }
     }
-  }, [id, router]);
+  }, [id, router, fetchCommunityData, isAdmin]);
 
   // Listen for URL changes after component is mounted
   useEffect(() => {
@@ -165,9 +166,9 @@ export default function CommunityDetail({ params }) {
     
     // Clean up interval on component unmount
     return () => clearInterval(refreshInterval);
-  }, [id, router, activeTab, urlSearch]);
+  }, [id, router, activeTab, urlSearch, fetchCommunityData, isAdmin]);
 
-  const fetchCommunityData = async () => {
+  const fetchCommunityData = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -175,7 +176,7 @@ export default function CommunityDetail({ params }) {
       
       // Get community details
       const communityResponse = await axios.get(
-        `http://localhost:5000/api/communities/${id}`,
+        `${API_URL}/api/communities/${id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -202,7 +203,7 @@ export default function CommunityDetail({ params }) {
         console.log('User is admin of this community, fetching join requests');
         try {
           const requestsResponse = await axios.get(
-            `http://localhost:5000/api/communities/${id}/membership-requests`,
+            `${API_URL}/api/communities/${id}/membership-requests`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           
@@ -248,7 +249,7 @@ export default function CommunityDetail({ params }) {
               const membersData = await Promise.all(
                 communityResponse.data.members.map(async (memberId) => {
                   const userResponse = await axios.get(
-                    `http://localhost:5000/api/users/${memberId}`,
+                    `${API_URL}/api/users/${memberId}`,
                     { headers: { Authorization: `Bearer ${token}` } }
                   );
                   return userResponse.data;
@@ -269,7 +270,7 @@ export default function CommunityDetail({ params }) {
       
       // Get orders for this community
       const ordersResponse = await axios.get(
-        `http://localhost:5000/api/orders/community/${id}`,
+        `${API_URL}/api/orders/community/${id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -281,7 +282,7 @@ export default function CommunityDetail({ params }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, API_URL, setLoading, setCommunity, setIsAdmin, setJoinRequests, setMembers, setCommunityOrders, setError]);
 
   const handleJoinRequest = async (requestId, status, userId) => {
     try {
@@ -313,7 +314,7 @@ export default function CommunityDetail({ params }) {
       
       // Use the membership-requests endpoint with the user ID
       try {
-        const endpoint = `http://localhost:5000/api/communities/${id}/membership-requests/${targetUserId}`;
+        const endpoint = `${API_URL}/api/communities/${id}/membership-requests/${targetUserId}`;
         console.log(`Sending request to: ${endpoint}`);
         
         const response = await axios.put(
@@ -337,7 +338,7 @@ export default function CommunityDetail({ params }) {
       try {
         console.log('Creating notification for user:', request.user._id);
         const notificationResponse = await axios.post(
-          'http://localhost:5000/api/notifications',
+          `${API_URL}/api/notifications`,
           {
             recipient: request.user._id,
             type: status === 'approved' ? 'request_approved' : 'request_rejected',
@@ -359,7 +360,7 @@ export default function CommunityDetail({ params }) {
       // Refresh join requests
       try {
         const requestsResponse = await axios.get(
-          `http://localhost:5000/api/communities/${id}/membership-requests`,
+          `${API_URL}/api/communities/${id}/membership-requests`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         
@@ -373,7 +374,7 @@ export default function CommunityDetail({ params }) {
       if (status === 'approved') {
         // Fetch updated community data to get the current members
         const communityResponse = await axios.get(
-          `http://localhost:5000/api/communities/${id}`,
+          `${API_URL}/api/communities/${id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         
@@ -391,7 +392,7 @@ export default function CommunityDetail({ params }) {
                 const membersData = await Promise.all(
                   communityResponse.data.members.map(async (memberId) => {
                     const userResponse = await axios.get(
-                      `http://localhost:5000/api/users/${memberId}`,
+                      `${API_URL}/api/users/${memberId}`,
                       { headers: { Authorization: `Bearer ${token}` } }
                     );
                     return userResponse.data;
@@ -894,7 +895,7 @@ export default function CommunityDetail({ params }) {
           <div className="bg-white rounded-xl shadow-sm p-8 text-center">
             <h3 className="text-xl font-semibold mb-2">Community not found</h3>
             <p className="text-gray-600 mb-4">
-              The community you're looking for doesn't exist or you don't have permission to view it.
+              The community you&apos;re looking for doesn&apos;t exist or you don&apos;t have permission to view it.
             </p>
             <button
               className="btn-primary"

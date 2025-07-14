@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import { FaUsers, FaUserPlus, FaCrown, FaCheckCircle, FaTimesCircle, FaMapMarkerAlt } from 'react-icons/fa';
+import { API_URL, getAuthHeaders } from '@/utils/apiConfig';
 
 export default function Communities() {
   const router = useRouter();
@@ -52,10 +53,10 @@ export default function Communities() {
     try {
       const token = localStorage.getItem('token');
       const [communitiesResponse, userResponse] = await Promise.all([
-        axios.get('http://localhost:5000/api/communities', {
+        axios.get(`${API_URL}/api/communities`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        axios.get('http://localhost:5000/api/users/me', {
+        axios.get(`${API_URL}/api/users/me`, {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
@@ -142,7 +143,7 @@ export default function Communities() {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        'http://localhost:5000/api/communities', 
+        `${API_URL}/api/communities`, 
         createFormData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -192,7 +193,7 @@ export default function Communities() {
       // Get the current user info to double-check membership status
       const token = localStorage.getItem('token');
       const userData = await axios.get(
-        'http://localhost:5000/api/users/me',
+        `${API_URL}/api/users/me`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -216,7 +217,7 @@ export default function Communities() {
       // Log the request details before sending
       console.log('Join request details:', {
         communityId: selectedCommunity._id,
-        endpoint: `http://localhost:5000/api/communities/${selectedCommunity._id}/join`,
+        endpoint: `${API_URL}/api/communities/${selectedCommunity._id}/join`,
         data: { reason: joinReason.trim() },
         headers: { Authorization: `Bearer ${token && token.substring(0, 10)}...` }
       });
@@ -229,7 +230,7 @@ export default function Communities() {
       console.log('Final request payload:', requestPayload);
       
       const response = await axios.post(
-        `http://localhost:5000/api/communities/${selectedCommunity._id}/join`,
+        `${API_URL}/api/communities/${selectedCommunity._id}/join`,
         requestPayload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -617,7 +618,7 @@ export default function Communities() {
                     Community creation requests need approval from LastMile before becoming active. This typically takes 1-2 business days.
                   </p>
                   <p className="text-xs text-yellow-600 mt-1">
-                    During this time, you'll be the only member of the community and will be automatically designated as the community admin.
+                    During this time, you&apos;ll be the only member of the community and will be automatically designated as the community admin.
                   </p>
                 </div>
               </div>
@@ -677,7 +678,7 @@ export default function Communities() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p className="text-sm text-blue-700">
-                  Your request will be reviewed by the community admin. You'll be notified when your membership is approved.
+                  Your request will be reviewed by the community admin. You&apos;ll be notified when your membership is approved.
                 </p>
               </div>
             </div>

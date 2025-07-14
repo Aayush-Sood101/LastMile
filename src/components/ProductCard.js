@@ -4,6 +4,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { FaCartPlus, FaLeaf, FaStar, FaPlus, FaMinus, FaShoppingBasket } from 'react-icons/fa';
+import { API_URL, getAuthHeaders } from '@/utils/apiConfig';
 
 export default function ProductCard({ product, onAddToCart }) {
   const [quantity, setQuantity] = useState(1);
@@ -23,15 +24,13 @@ export default function ProductCard({ product, onAddToCart }) {
     
     try {
       await axios.post(
-        'http://localhost:5000/api/cart/add-item',
+        `${API_URL}/api/cart/add-item`,
         {
           productId: product._id,
           quantity: quantity
         },
         {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: getAuthHeaders()
         }
       );
       

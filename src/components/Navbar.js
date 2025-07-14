@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -17,6 +17,7 @@ import {
   FaTimes 
 } from 'react-icons/fa';
 import NotificationBell from './NotificationBell';
+import { API_URL, getAuthHeaders } from '../utils/apiConfig';
 
 export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -37,11 +38,11 @@ export default function Navbar() {
       // Get cart count
       fetchCartCount(token);
     }
-  }, []);
+  }, [fetchCartCount]);
 
-  const fetchCartCount = async (token) => {
+  const fetchCartCount = useCallback(async (token) => {
     try {
-      const response = await fetch('http://localhost:5000/api/cart', {
+      const response = await fetch(`${API_URL}/api/cart`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -56,7 +57,7 @@ export default function Navbar() {
     } catch (error) {
       console.error('Error fetching cart:', error);
     }
-  };
+  }, [API_URL, setCartCount]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');

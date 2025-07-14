@@ -1,3 +1,5 @@
+'use client';
+
 import PriceOptimizerAdvanced from '@/utils/priceOptimizerAdvanced';
 
 // Sample data from the Python example

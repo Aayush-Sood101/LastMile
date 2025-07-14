@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { FaBell, FaCircle } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+import { API_URL, getAuthHeaders } from '../utils/apiConfig';
 
 export default function NotificationBell({ userId, isMobile = false }) {
   const [notifications, setNotifications] = useState([]);
@@ -19,16 +20,16 @@ export default function NotificationBell({ userId, isMobile = false }) {
       const interval = setInterval(fetchNotifications, 60000);
       return () => clearInterval(interval);
     }
-  }, [userId]);
+  }, [userId, fetchNotifications]);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
       
       setLoading(true);
       const response = await axios.get(
-        'http://localhost:5000/api/notifications',
+        `${API_URL}/api/notifications`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -38,7 +39,7 @@ export default function NotificationBell({ userId, isMobile = false }) {
       console.error('Error fetching notifications:', error);
       setLoading(false);
     }
-  };
+  }, [API_URL, setLoading, setNotifications]);
 
   const markAsRead = async (id) => {
     try {
@@ -46,7 +47,7 @@ export default function NotificationBell({ userId, isMobile = false }) {
       if (!token) return;
       
       await axios.put(
-        `http://localhost:5000/api/notifications/${id}/read`,
+        `${API_URL}/api/notifications/${id}/read`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -66,7 +67,7 @@ export default function NotificationBell({ userId, isMobile = false }) {
       if (!token) return;
       
       await axios.put(
-        'http://localhost:5000/api/notifications/mark-all-read',
+        `${API_URL}/api/notifications/mark-all-read`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -84,7 +85,7 @@ export default function NotificationBell({ userId, isMobile = false }) {
       if (!token) return;
       
       await axios.delete(
-        `http://localhost:5000/api/notifications/${id}`,
+        `${API_URL}/api/notifications/${id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -144,7 +145,7 @@ export default function NotificationBell({ userId, isMobile = false }) {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showNotifications]);
+  }, [showNotifications, setShowNotifications]);
 
   return (
     <div className="relative" id="notification-bell-container">

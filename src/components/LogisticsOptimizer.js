@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { optimizeDiscountsWithLogistics } from '@/utils/logisticsApi';
 import { toast } from 'react-hot-toast';
+import { API_URL, getAuthHeaders } from '@/utils/apiConfig';
 
 const LogisticsOptimizer = () => {
   const router = useRouter();
@@ -38,12 +39,10 @@ const LogisticsOptimizer = () => {
       
       setLoading(true);
       
-      // Define possible API endpoints to try in order
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      // Use the API_URL from our configuration
       const endpoints = [
-        '/api/products',                     // Next.js API route
-        `${API_BASE_URL}/api/products`,      // Direct backend API
-        'http://localhost:5000/api/products' // Explicit localhost
+        '/api/products',               // Next.js API route
+        `${API_URL}/api/products`      // Direct backend API using our config
       ];
       
       let response = null;

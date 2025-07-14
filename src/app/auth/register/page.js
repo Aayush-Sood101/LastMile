@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { API_URL } from '@/utils/apiConfig';
 
 export default function Register() {
   const router = useRouter();
@@ -42,7 +43,7 @@ export default function Register() {
       // Remove confirmPassword from data to be sent to API
       const { confirmPassword, ...dataToSubmit } = formData;
       
-      const response = await axios.post('http://localhost:5000/api/users/register', dataToSubmit);
+      const response = await axios.post(`${API_URL}/api/users/register`, dataToSubmit);
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       router.push('/dashboard');

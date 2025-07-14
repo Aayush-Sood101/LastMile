@@ -8,6 +8,7 @@ import Navbar from '@/components/Navbar';
 import OrdersList from '@/components/OrdersList';
 import { useToast } from '@/components/Toast';
 import { FaUserEdit, FaLeaf, FaShoppingBag, FaUsers, FaClipboardList, FaEnvelope, FaPhone, FaMapMarkerAlt } from 'react-icons/fa';
+import { API_URL, getAuthHeaders } from '@/utils/apiConfig';
 
 export default function Account() {
   const router = useRouter();
@@ -44,7 +45,7 @@ export default function Account() {
       const token = localStorage.getItem('token');
       
       // Get user profile
-      const userResponse = await axios.get('http://localhost:5000/api/users/me', {
+      const userResponse = await axios.get(`${API_URL}/api/users/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -57,14 +58,14 @@ export default function Account() {
       });
       
       // Get user orders
-      const ordersResponse = await axios.get('http://localhost:5000/api/orders', {
+      const ordersResponse = await axios.get(`${API_URL}/api/orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       setOrders(ordersResponse.data);
       
       // Get carbon stats
-      const carbonResponse = await axios.get('http://localhost:5000/api/orders/carbon-stats/user', {
+      const carbonResponse = await axios.get(`${API_URL}/api/orders/carbon-stats/user`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -92,7 +93,7 @@ export default function Account() {
     try {
       const token = localStorage.getItem('token');
       await axios.put(
-        'http://localhost:5000/api/users/me',
+        `${API_URL}/api/users/me`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -656,7 +657,7 @@ export default function Account() {
                           transition={{ delay: 1, duration: 0.5 }}
                         >
                           <p className="text-xl">
-                            You've reduced your carbon footprint by{' '}
+                            You&apos;ve reduced your carbon footprint by{' '}
                             <span className="text-green-600 font-bold text-2xl">
                               {carbonStats.individualDeliveries && carbonStats.individualDeliveries !== 0 
                                 ? (((carbonStats.individualDeliveries - (carbonStats.bulkDeliveries || 0)) / carbonStats.individualDeliveries) * 100).toFixed(1) 
