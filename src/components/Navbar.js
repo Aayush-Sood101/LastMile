@@ -26,20 +26,6 @@ export default function Navbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
-  useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-    
-    if (token && userStr) {
-      setIsLoggedIn(true);
-      setUser(JSON.parse(userStr));
-      
-      // Get cart count
-      fetchCartCount(token);
-    }
-  }, [fetchCartCount]);
-
   const fetchCartCount = useCallback(async (token) => {
     try {
       const response = await fetch(`${API_URL}/api/cart`, {
@@ -58,6 +44,20 @@ export default function Navbar() {
       console.error('Error fetching cart:', error);
     }
   }, [API_URL, setCartCount]);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    
+    if (token && userStr) {
+      setIsLoggedIn(true);
+      setUser(JSON.parse(userStr));
+      
+      // Get cart count
+      fetchCartCount(token);
+    }
+  }, [fetchCartCount]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
