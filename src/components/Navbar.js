@@ -1,20 +1,19 @@
 'use client';
-
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { 
-  FaShoppingCart, 
-  FaStore, 
-  FaUser, 
-  FaSignOutAlt, 
-  FaUsers, 
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  FaShoppingCart,
+  FaStore,
+  FaUser,
+  FaSignOutAlt,
+  FaUsers,
   FaClipboardList,
   FaLeaf,
   FaSearch,
   FaBars,
-  FaTimes 
+  FaTimes
 } from 'react-icons/fa';
 import NotificationBell from './NotificationBell';
 import { API_URL, getAuthHeaders } from '../utils/apiConfig';
@@ -46,15 +45,12 @@ export default function Navbar() {
   }, [API_URL, setCartCount]);
 
   useEffect(() => {
-    // Check if user is logged in
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
     
     if (token && userStr) {
       setIsLoggedIn(true);
       setUser(JSON.parse(userStr));
-      
-      // Get cart count
       fetchCartCount(token);
     }
   }, [fetchCartCount]);
@@ -70,32 +66,40 @@ export default function Navbar() {
   };
 
   const isActive = (path) => {
-    return pathname === path ? 'bg-green-700' : '';
+    return pathname === path ? 'bg-emerald-500/20 text-emerald-700 border-emerald-200' : '';
   };
 
   return (
     <motion.nav 
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ type: "spring", stiffness: 100 }}
-      className="bg-white text-gray-800 shadow-md sticky top-0 z-50"
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 120, damping: 20 }}
+      className="bg-white/95 backdrop-blur-xl text-gray-800 shadow-lg border-b border-gray-100/50 sticky top-0 z-50"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20">
-          <div className="flex items-center">
-            <Link href={isLoggedIn ? '/dashboard' : '/'} className="flex items-center">
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white mr-3">
-                <FaLeaf className="h-5 w-5" />
-              </div>
-              <span className="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-emerald-800">
+          <motion.div 
+            className="flex items-center"
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: "spring", stiffness: 400 }}
+          >
+            <Link href={isLoggedIn ? '/dashboard' : '/'} className="flex items-center group">
+              <motion.div 
+                className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 flex items-center justify-center text-white mr-3 shadow-lg group-hover:shadow-emerald-200"
+                whileHover={{ rotate: 5, scale: 1.1 }}
+                transition={{ type: "spring", stiffness: 400 }}
+              >
+                <FaLeaf className="h-6 w-6" />
+              </motion.div>
+              <span className="font-bold text-3xl bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700">
                 LastMile
               </span>
             </Link>
-          </div>
+          </motion.div>
           
           {isLoggedIn && (
             <>
-              <div className="hidden md:flex items-center space-x-1">
+              <div className="hidden md:flex items-center space-x-2">
                 <NavLink href="/dashboard" isActive={pathname === '/dashboard'}>
                   <FaStore className="mr-2" size={16} /> Products
                 </NavLink>
@@ -109,22 +113,25 @@ export default function Navbar() {
                   <FaUser className="mr-2" size={16} /> Account
                 </NavLink>
                 
-                <Link href="/cart" className="relative ml-2">
+                <Link href="/cart" className="relative ml-4">
                   <motion.div 
-                    whileHover={{ scale: 1.1 }}
+                    whileHover={{ scale: 1.1, y: -2 }}
                     whileTap={{ scale: 0.95 }}
-                    className="p-3 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 transition-colors duration-200"
+                    className="p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-600 hover:from-emerald-100 hover:to-emerald-200 transition-all duration-300 shadow-md hover:shadow-lg border border-emerald-200/50"
                   >
                     <FaShoppingCart size={18} />
-                    {cartCount > 0 && (
-                      <motion.span 
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center font-semibold"
-                      >
-                        {cartCount}
-                      </motion.span>
-                    )}
+                    <AnimatePresence>
+                      {cartCount > 0 && (
+                        <motion.span 
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0, opacity: 0 }}
+                          className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full text-xs w-6 h-6 flex items-center justify-center font-bold shadow-lg"
+                        >
+                          {cartCount}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
                 </Link>
                 
@@ -132,46 +139,63 @@ export default function Navbar() {
                   <NotificationBell userId={user?.id} />
                 </div>
                 
-                <button
+                <motion.button
                   onClick={handleLogout}
-                  className="ml-2 p-3 rounded-full text-gray-500 hover:bg-gray-100 transition-colors duration-200"
+                  whileHover={{ scale: 1.05, y: -1 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="ml-4 p-3 rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all duration-300 border border-transparent hover:border-red-200"
                   aria-label="Log out"
                 >
                   <FaSignOutAlt size={18} />
-                </button>
+                </motion.button>
               </div>
               
-              {/* Mobile menu button */}
               <div className="md:hidden flex items-center">
-                <button
+                <motion.button
                   onClick={toggleMenu}
-                  className="p-2 rounded-md text-emerald-600 hover:bg-emerald-50 focus:outline-none"
+                  whileTap={{ scale: 0.95 }}
+                  className="p-3 rounded-xl text-emerald-600 hover:bg-emerald-50 focus:outline-none transition-all duration-200 border border-emerald-200/50"
                 >
-                  {isOpen ? (
-                    <FaTimes size={24} />
-                  ) : (
-                    <FaBars size={24} />
-                  )}
-                </button>
+                  <AnimatePresence mode="wait">
+                    {isOpen ? (
+                      <motion.div
+                        key="close"
+                        initial={{ rotate: -90, opacity: 0 }}
+                        animate={{ rotate: 0, opacity: 1 }}
+                        exit={{ rotate: 90, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <FaTimes size={24} />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="menu"
+                        initial={{ rotate: 90, opacity: 0 }}
+                        animate={{ rotate: 0, opacity: 1 }}
+                        exit={{ rotate: -90, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <FaBars size={24} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
               </div>
             </>
           )}
         </div>
       </div>
 
-      {/* Mobile menu */}
-      {isLoggedIn && (
-        <motion.div 
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ 
-            opacity: isOpen ? 1 : 0, 
-            height: isOpen ? 'auto' : 0 
-          }}
-          transition={{ duration: 0.3 }}
-          className="md:hidden overflow-hidden"
-        >
-          {isOpen && (
-            <div className="px-2 pt-2 pb-4 space-y-1 bg-white shadow-lg">
+      <AnimatePresence>
+        {isLoggedIn && isOpen && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0, y: -20 }}
+            animate={{ opacity: 1, height: 'auto', y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -20 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="md:hidden overflow-hidden bg-white/95 backdrop-blur-xl border-t border-gray-100"
+          >
+            <div className="px-4 pt-4 pb-6 space-y-2">
               <MobileNavLink href="/dashboard" isActive={pathname === '/dashboard'}>
                 <FaStore className="mr-3" /> Products
               </MobileNavLink>
@@ -186,66 +210,71 @@ export default function Navbar() {
               </MobileNavLink>
               <MobileNavLink href="/cart" isActive={pathname === '/cart'}>
                 <div className="flex items-center">
-                  <FaShoppingCart className="mr-3" /> 
-                  Cart 
+                  <FaShoppingCart className="mr-3" />
+                  Cart
                   {cartCount > 0 && (
-                    <span className="ml-2 bg-red-500 text-white rounded-full px-2 py-0.5 text-xs">
+                    <span className="ml-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-full px-2 py-1 text-xs font-bold shadow-md">
                       {cartCount}
                     </span>
                   )}
                 </div>
               </MobileNavLink>
               
-              <div className="px-4 py-3">
-                <div className="flex items-center">
-                  <span className="mr-3">Notifications</span>
+              <div className="px-4 py-4 border-t border-gray-100 mt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700 font-medium">Notifications</span>
                   <NotificationBell userId={user?.id} isMobile={true} />
                 </div>
               </div>
-              <div 
-                className="block px-4 py-3 rounded-md text-base font-medium text-red-600 hover:bg-red-50 cursor-pointer"
+              
+              <motion.div 
+                whileTap={{ scale: 0.98 }}
+                className="block px-4 py-4 rounded-xl text-base font-medium text-red-600 hover:bg-red-50 cursor-pointer transition-all duration-200 border border-transparent hover:border-red-200 mx-2"
                 onClick={handleLogout}
               >
                 <div className="flex items-center">
                   <FaSignOutAlt className="mr-3" /> Logout
                 </div>
-              </div>
+              </motion.div>
             </div>
-          )}
-        </motion.div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.nav>
   );
 }
 
-// NavLink for desktop navigation
 function NavLink({ children, href, isActive }) {
   return (
-    <Link 
-      href={href}
-      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center
-        ${isActive 
-          ? 'bg-emerald-50 text-emerald-700' 
-          : 'text-gray-700 hover:bg-gray-50 hover:text-emerald-600'}`
-      }
-    >
-      {children}
+    <Link href={href}>
+      <motion.div
+        whileHover={{ scale: 1.05, y: -1 }}
+        whileTap={{ scale: 0.98 }}
+        className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 flex items-center border shadow-sm hover:shadow-md ${
+          isActive
+            ? 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200 shadow-emerald-100'
+            : 'text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:text-emerald-600 border-gray-200/50 hover:border-emerald-200'
+        }`}
+      >
+        {children}
+      </motion.div>
     </Link>
   );
 }
 
-// Mobile NavLink for responsive design
 function MobileNavLink({ children, href, isActive }) {
   return (
-    <Link 
-      href={href}
-      className={`block px-4 py-3 rounded-md text-base font-medium
-        ${isActive 
-          ? 'bg-emerald-50 text-emerald-700' 
-          : 'text-gray-700 hover:bg-gray-50'}`
-      }
-    >
-      {children}
+    <Link href={href}>
+      <motion.div
+        whileTap={{ scale: 0.98 }}
+        className={`block px-4 py-4 rounded-xl text-base font-medium transition-all duration-200 border ${
+          isActive
+            ? 'bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-700 border-emerald-200'
+            : 'text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 border-transparent hover:border-gray-200'
+        }`}
+      >
+        {children}
+      </motion.div>
     </Link>
   );
 }

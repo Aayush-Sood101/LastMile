@@ -16,9 +16,9 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-      <body className={`${inter.className} antialiased`} suppressHydrationWarning>
+      <body className={`${inter.className} antialiased bg-gradient-to-br from-gray-50 via-white to-emerald-50/30`} suppressHydrationWarning>
         <ToastProvider>
-          <main className="min-h-screen bg-gray-50">
+          <main className="min-h-screen">
             {children}
           </main>
         </ToastProvider>
